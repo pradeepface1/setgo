@@ -1,0 +1,202 @@
+.trip-history {
+    padding: 0;
+}
+
+.trip-history h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.history-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 16px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.no-history {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.no-history p {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.no-history-subtitle {
+    font-size: 0.9rem;
+    margin-top: 8px !important;
+    opacity: 0.7;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.history-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.history-card.completed {
+    border-left: 4px solid #10b981;
+}
+
+.history-card.cancelled {
+    border-left: 4px solid #ef4444;
+    opacity: 0.8;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.history-header>div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.trip-customer {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #333;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    width: fit-content;
+}
+
+.status-badge.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge.cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.trip-date {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.trip-route {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+}
+
+.route-point {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.route-label {
+    font-size: 0.7rem;
+    color: #666;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.route-location {
+    font-size: 0.9rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.route-arrow {
+    font-size: 1.3rem;
+    color: #667eea;
+    font-weight: bold;
+}
+
+.trip-vehicle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.vehicle-badge {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.vehicle-badge.category {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.vehicle-badge.subcategory {
+    background: #e9d5ff;
+    color: #6b21a8;
+}
+
+.trip-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #666;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.time-icon {
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
+}
+
+@media (max-width: 640px) {
+    .trip-route {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .route-arrow {
+        transform: rotate(90deg);
+    }
+}
