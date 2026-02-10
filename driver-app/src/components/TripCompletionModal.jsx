@@ -8,7 +8,8 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
         tollParking: '',
         permit: '',
         extraKm: '',
-        extraHours: ''
+        extraHours: '',
+        dripSheet: null
     });
     const [submitting, setSubmitting] = useState(false);
 
@@ -33,20 +34,24 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
         }
 
         setSubmitting(true);
-        // Convert strings to numbers
-        const submissionData = {
-            totalKm: parseFloat(formData.totalKm),
-            totalHours: parseFloat(formData.totalHours),
-            tollParking: formData.tollParking ? parseFloat(formData.tollParking) : 0,
-            permit: formData.permit ? parseFloat(formData.permit) : 0,
-            extraKm: formData.extraKm ? parseFloat(formData.extraKm) : 0,
-            extraHours: formData.extraHours ? parseFloat(formData.extraHours) : 0
-        };
 
         try {
-            await onComplete(submissionData);
+            const data = new FormData();
+            data.append('totalKm', formData.totalKm);
+            data.append('totalHours', formData.totalHours);
+            if (formData.tollParking) data.append('tollParking', formData.tollParking);
+            if (formData.permit) data.append('permit', formData.permit);
+            if (formData.extraKm) data.append('extraKm', formData.extraKm);
+            if (formData.extraHours) data.append('extraHours', formData.extraHours);
+
+            if (formData.dripSheet) {
+                data.append('dripSheet', formData.dripSheet);
+            }
+
+            await onComplete(data);
         } catch (error) {
             console.error('Submission failed', error);
+            alert('Failed to submit trip details: ' + (error.message || 'Unknown error'));
         } finally {
             setSubmitting(false);
         }
@@ -136,6 +141,21 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
                                 placeholder="0.00"
                             />
                         </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Drip Sheet (Image) - Optional</label>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/jpg"
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                    setFormData(prev => ({ ...prev, dripSheet: e.target.files[0] }));
+                                }
+                            }}
+                            className="file-input"
+                        />
+                        <p className="help-text">Upload a photo of the completed trip sheet (JPEG/PNG)</p>
                     </div>
 
                     <div className="modal-actions">

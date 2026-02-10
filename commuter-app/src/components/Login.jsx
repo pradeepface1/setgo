@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
+import logo from '../assets/logo.png';
 import './Login.css';
 
 function Login() {
@@ -43,7 +44,7 @@ function Login() {
         <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
-                    <h1>Jubilant Setgo</h1>
+                    <img src={logo} alt="SetGo Logo" style={{ width: '160px', height: '160px', marginBottom: '10px' }} />
                     <p>Commuter Login</p>
                 </div>
 

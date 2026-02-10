@@ -22,36 +22,41 @@ function AppContent() {
   if (!user) return <Login />;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="trip-list-container">
       {/* Header */}
-      <header className="bg-white shadow-sm px-4 py-3 sticky top-0 z-10 flex justify-between items-center">
-        <h1 className="text-lg font-bold text-jubilant-600">Jubilant Commuter</h1>
-        <button
-          onClick={() => setActiveTab(activeTab === 'request' ? 'history' : 'request')}
-          className="flex items-center px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
-        >
-          {activeTab === 'request' ? (
-            <>
-              <History className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">History</span>
-            </>
-          ) : (
-            <>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">New Trip</span>
-            </>
-          )}
+      <div className="header">
+        <div>
+          <h1>SetGo</h1>
+          <p className="driver-name">Welcome, {user.username || 'Commuter'}</p>
+        </div>
+        <button onClick={logout} className="logout-button">
+          Logout
         </button>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 pb-6 overflow-y-auto">
+      <div className="trips-section">
+        <div className="tab-navigation">
+          <button
+            className={`tab-button ${activeTab === 'request' ? 'active' : ''}`}
+            onClick={() => setActiveTab('request')}
+          >
+            Request Ride
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => setActiveTab('history')}
+          >
+            History
+          </button>
+        </div>
+
         {activeTab === 'request' ? (
           <TripRequestForm onTripCreated={() => setActiveTab('history')} />
         ) : (
           <TripHistory />
         )}
-      </main>
+      </div>
     </div>
   );
 }

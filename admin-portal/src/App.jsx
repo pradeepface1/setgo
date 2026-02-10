@@ -12,6 +12,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
 import Login from './pages/Login';
+import Organizations from './pages/Organizations';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                 <Route path="users" element={<Users />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="organizations" element={<Organizations />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

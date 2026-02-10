@@ -103,56 +103,60 @@ const Users = () => {
                 ) : users.length === 0 ? (
                     <div className="p-12 text-center text-gray-500 text-sm">No users found. Create one to get started.</div>
                 ) : (
-                    <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {users.map((user) => (
-                            <li key={user._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition duration-150 ease-in-out">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                            <User className="h-5 w-5 text-blue-600" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Commuters */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                            <h3 className="text-lg font-medium mb-4 text-green-800">Commuters</h3>
+                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
+                                {users.filter(u => u.role !== 'SUPER_ADMIN' && u.role !== 'ORG_ADMIN').map(user => (
+                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-gray-900">{user.username}</div>
+                                            {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
                                         </div>
-                                        <div className="ml-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">{user.username}</div>
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                                                        user.role === 'admin' ? 'bg-blue-100 text-blue-800' :
-                                                            'bg-green-100 text-green-800'
-                                                    }`}>
-                                                    {user.role === 'superadmin' ? 'Super Admin' :
-                                                        user.role === 'admin' ? 'Admin' :
-                                                            'Commuter'}
-                                                </span>
-                                            </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
+                                            <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                            <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                                            <p>Created {new Date(user.createdAt).toLocaleDateString()}</p>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Org Admins */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                            <h3 className="text-lg font-medium mb-4 text-blue-800">Org Admins</h3>
+                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
+                                {users.filter(u => u.role === 'ORG_ADMIN').map(user => (
+                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-gray-900">{user.username}</div>
+                                            {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleEdit(user)}
-                                                className="p-1 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 focus:outline-none transition-colors"
-                                                title="Edit User"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            {user.username !== 'superadmin' && (
-                                                <button
-                                                    onClick={() => handleDelete(user._id)}
-                                                    className="p-1 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 focus:outline-none transition-colors"
-                                                    title="Delete User"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            )}
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
+                                            <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
                                         </div>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Super Admins */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                            <h3 className="text-lg font-medium mb-4 text-purple-800">Super Admins</h3>
+                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
+                                {users.filter(u => u.role === 'SUPER_ADMIN').map(user => (
+                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-medium text-gray-900">{user.username}</div>
+                                        </div>
+                                        {/* No Actions for Super Admin */}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

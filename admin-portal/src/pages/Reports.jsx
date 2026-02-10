@@ -1,13 +1,13 @@
 
 import React, { useEffect, useState } from 'react';
-import { tripService, sosService } from '../services/api';
-import { PieChart, Pie, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Loader2, X, AlertTriangle, FileText, Clock, Map, DollarSign, Activity } from 'lucide-react';
+import { tripService } from '../services/api';
+import { PieChart, Pie, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Loader2, X, FileText, Clock, Map, DollarSign, Activity } from 'lucide-react';
 import TripList from '../components/trips/TripList';
 
 const Reports = () => {
     const [stats, setStats] = useState(null);
-    const [sosStats, setSosStats] = useState(null);
+
     const [reports, setReports] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -16,13 +16,11 @@ const Reports = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const [tripData, sosData, reportsData] = await Promise.all([
+                const [tripData, reportsData] = await Promise.all([
                     tripService.getTripStats(),
-                    sosService.getStats(),
                     tripService.getReports()
                 ]);
                 setStats(tripData);
-                setSosStats(sosData);
                 setReports(reportsData);
             } catch (err) {
                 setError('Failed to load statistics: ' + err.message);
@@ -37,22 +35,23 @@ const Reports = () => {
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8 text-jubilant-600" /></div>;
     if (error) return <div className="text-red-500 p-4">{error}</div>;
 
-    // Prepare data for chats
-    const pieData = [
-        { name: 'Pending', value: stats.pending, color: '#F59E0B' },
-        { name: 'Assigned', value: stats.assigned, color: '#3B82F6' },
-        { name: 'Completed', value: stats.completed, color: '#10B981' },
-        { name: 'Cancelled', value: stats.cancelled, color: '#EF4444' }
-    ];
+    // Prepare data for charts
+    const totalTrips = stats ? (stats.pending + stats.assigned + (stats.accepted || 0) + (stats.started || 0) + stats.completed + stats.cancelled) : 0;
 
-    const sosChartData = [
-        { name: 'Open', value: sosStats?.open || 0, fill: '#EF4444' },
-        { name: 'Resolved', value: sosStats?.resolved || 0, fill: '#10B981' },
-        { name: 'False Alarm', value: sosStats?.false_alarm || 0, fill: '#6B7280' }
-    ];
+    const pieData = [
+        { name: 'Pending', value: stats.pending, color: '#F59E0B' }, // Yellow/Amber
+        { name: 'Assigned', value: stats.assigned, color: '#6B7280' }, // Gray
+        { name: 'Started', value: stats.started || 0, color: '#F97316' }, // Orange
+        { name: 'Completed', value: stats.completed, color: '#10B981' }, // Green
+        { name: 'Cancelled', value: stats.cancelled, color: '#EF4444' } // Red
+    ].map(item => ({
+        ...item,
+        percentage: totalTrips > 0 ? ((item.value / totalTrips) * 100).toFixed(1) : 0
+    }));
 
     const reportMetrics = [
         { label: 'Total Kms', value: `${reports?.totalKm || 0} km`, icon: Map, color: 'bg-blue-500' },
+        // ... (lines 49-55 remain same but need context for replace)
         { label: 'Total Hours', value: `${reports?.totalHours || 0} hrs`, icon: Clock, color: 'bg-indigo-500' },
         { label: 'Toll/Parking', value: `₹${reports?.tollParking || 0}`, icon: DollarSign, color: 'bg-green-500' },
         { label: 'Permit Charges', value: `₹${reports?.permit || 0}`, icon: FileText, color: 'bg-purple-500' },
@@ -62,6 +61,7 @@ const Reports = () => {
 
     return (
         <div className="space-y-8">
+            {/* ... (lines 59-179) ... */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h1>
             </div>
@@ -83,7 +83,7 @@ const Reports = () => {
             </div>
 
             {/* Status Summary Cards */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
                 <button
                     onClick={() => setSelectedStatus('PENDING')}
                     className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'PENDING' ? 'ring-2 ring-yellow-500' : ''}`}
@@ -109,12 +109,12 @@ const Reports = () => {
 
                 <button
                     onClick={() => setSelectedStatus('ASSIGNED')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'ASSIGNED' ? 'ring-2 ring-blue-500' : ''}`}
+                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'ASSIGNED' ? 'ring-2 ring-gray-500' : ''}`}
                 >
                     <div className="p-5">
                         <div className="flex items-center">
                             <div className="flex-shrink-0">
-                                <div className="rounded-md bg-blue-500 p-3">
+                                <div className="rounded-md bg-gray-500 p-3">
                                     <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
@@ -124,6 +124,29 @@ const Reports = () => {
                                 <dl>
                                     <dt className="text-sm font-medium text-gray-500 truncate">Assigned</dt>
                                     <dd className="text-3xl font-semibold text-gray-900">{stats.assigned}</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+
+                <button
+                    onClick={() => setSelectedStatus('STARTED')}
+                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'STARTED' ? 'ring-2 ring-orange-500' : ''}`}
+                >
+                    <div className="p-5">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className="rounded-md bg-orange-500 p-3">
+                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt className="text-sm font-medium text-gray-500 truncate">Started</dt>
+                                    <dd className="text-3xl font-semibold text-gray-900">{stats.started || 0}</dd>
                                 </dl>
                             </div>
                         </div>
@@ -178,7 +201,7 @@ const Reports = () => {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 {/* Trip Status Chart */}
                 <div className="bg-white shadow rounded-lg p-6">
                     <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Trip Status Distribution</h3>
@@ -188,47 +211,36 @@ const Reports = () => {
                                 data={pieData}
                                 cx="50%"
                                 cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                outerRadius={100}
+                                outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
+                                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                                    const RADIAN = Math.PI / 180;
+                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                    return percent > 0 ? `${(percent * 100).toFixed(0)}%` : '';
+                                }}
+                                labelLine={false}
                             >
                                 {pieData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                             </Pie>
-                            <Tooltip />
+                            <Tooltip formatter={(value, name, props) => [`${value} (${props.payload.percentage}%)`, name]} />
+                            <Legend
+                                payload={pieData.map(item => ({
+                                    id: item.name,
+                                    type: 'square',
+                                    value: `${item.name} (${item.percentage}%)`,
+                                    color: item.color
+                                }))}
+                            />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
 
-                {/* SOS Alerts Chart */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <h3 className="text-lg font-medium leading-6 text-gray-900">SOS Alert Distribution</h3>
-                    </div>
-                    {sosStats ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={sosChartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Bar dataKey="value">
-                                    {sosChartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="flex items-center justify-center h-64 text-gray-500">
-                            No SOS Data
-                        </div>
-                    )}
-                </div>
+
             </div>
 
             {/* Filtered Trip List */}

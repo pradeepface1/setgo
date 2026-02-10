@@ -166,3 +166,17 @@
     background: #6ee7b7;
     cursor: not-allowed;
 }
+
+.file-input {
+    padding: 8px;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    background: #f9fafb;
+    width: 100%;
+}
+
+.help-text {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 4px;
+}

@@ -29,6 +29,14 @@ const Login = () => {
 
         try {
             const response = await tripService.login(formData.username, formData.password);
+
+            // Check Role - Only allow Admins
+            if (response.user.role !== 'SUPER_ADMIN' && response.user.role !== 'ORG_ADMIN') {
+                setError('Access Denied: This portal is for Administrators only.');
+                setLoading(false);
+                return;
+            }
+
             login(response.user);
             navigate('/');
         } catch (err) {
@@ -43,7 +51,7 @@ const Login = () => {
             <div className="w-full max-w-md">
                 {/* Logo/Brand */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2">Jubilant</h1>
+                    <h1 className="text-4xl font-bold text-white mb-2">SetGo</h1>
                     <p className="text-gray-400">Admin Portal</p>
                 </div>
 
@@ -134,7 +142,7 @@ const Login = () => {
 
                 {/* Footer */}
                 <p className="text-center text-gray-500 text-sm mt-8">
-                    © 2026 Jubilant. All rights reserved.
+                    © 2026 SetGo. All rights reserved.
                 </p>
             </div>
         </div>

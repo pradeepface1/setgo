@@ -107,33 +107,7 @@ function TripRequestForm() {
 
     return (
         <div className="trip-request-container">
-            <div className="header">
-                <div className="header-content">
-                    <div>
-                        <h1>Jubilant Setgo</h1>
-                        <p>Request a Trip</p>
-                        {user && <p className="user-greeting">Welcome, {user.username}!</p>}
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                            onClick={handleSOS}
-                            className="sos-button"
-                            type="button"
-                            disabled={sosLoading}
-                            style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                            {sosLoading ? 'Sending...' : 'SOS'}
-                        </button>
-                        <button
-                            onClick={logout}
-                            className="logout-button"
-                            type="button"
-                        >
-                            Logout
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-6">Request a Trip</h2>
 
             {success && (
                 <div className="success-message">

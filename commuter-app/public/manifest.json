@@ -1,7 +1,7 @@
 {
-    "name": "Jubilant Commuter",
-    "short_name": "Jubilant",
-    "description": "Request trips with Jubilant",
+    "name": "SetGo Commuter",
+    "short_name": "SetGo",
+    "description": "Request trips with SetGo",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#667eea",

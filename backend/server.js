@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -17,6 +18,7 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/jubilant_mvp')
@@ -69,6 +71,7 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/sos', require('./routes/sos'));
+app.use('/api/organizations', require('./routes/organizations'));
 
 app.get('/', (req, res) => {
   res.send('Jubilant Backend API is Running');

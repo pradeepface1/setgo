@@ -83,7 +83,7 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
     const otherDrivers = filteredDrivers.filter(d => !suggestedDrivers.includes(d));
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[9999]">
             <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
                 <div className="flex items-center justify-between p-4 border-b">
                     <h3 className="text-xl font-semibold text-gray-900">Assign Driver</h3>

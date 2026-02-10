@@ -43,7 +43,7 @@ const Header = () => {
                             <p className="text-xs text-gray-500 flex items-center">
                                 <Shield className="h-3 w-3 mr-1" />
                                 {user?.role === 'superadmin' ? 'Super Admin' :
-                                    user?.role === 'admin' ? 'Admin' : 'Commuter'}
+                                    user?.role === 'admin' ? 'Admin' : ''}
                             </p>
                         </div>
                     </div>

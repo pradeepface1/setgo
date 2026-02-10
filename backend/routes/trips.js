@@ -4,8 +4,10 @@ const Driver = require('../models/Driver');
 const Trip = require('../models/Trip');
 const { parseWhatsAppMessage } = require('../utils/parser');
 
-// POST /api/trips/parse - Parse raw text into structured data
-router.post('/parse', async (req, res) => {
+const { authenticate, filterByOrganization } = require('../middleware/auth');
+
+// POST /api/trips/parse - Parse raw text (Requires authentication now?)
+router.post('/parse', authenticate, async (req, res) => {
     try {
         const { text } = req.body;
         if (!text) return res.status(400).json({ error: 'Text is required' });
@@ -18,54 +20,59 @@ router.post('/parse', async (req, res) => {
 });
 
 // POST /api/trips - Create a new trip
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
     try {
-        console.log('===== TRIP CREATION DEBUG =====');
-        console.log('1. Received req.body:', JSON.stringify(req.body, null, 2));
+        const tripData = { ...req.body };
 
-        const trip = new Trip(req.body);
+        // Auto-assign organization
+        if (req.user.role === 'SUPER_ADMIN') {
+            if (!tripData.organizationId) {
+                // If not provided, could fallback to user's choice or error
+                // For now, let's say Super Admin must specify unless testing
+                // But for manual trip creation, we might default to SetGo...
+                // Actually, if creating from UI, UI should send it, or we select one.
+                if (!tripData.organizationId) {
+                    // Try to find default SetGo org? Or error?
+                    // Let's require it for Super Admin for correctness
+                    // But to avoid breaking, maybe handle gracefully?
+                }
+            }
+        } else {
+            tripData.organizationId = req.user.organizationId;
+        }
 
-        console.log('2. Trip object before save:', JSON.stringify(trip.toObject(), null, 2));
-        console.log('3. vehicleCategory:', trip.vehicleCategory);
-        console.log('4. vehicleSubcategory:', trip.vehicleSubcategory);
-        console.log('5. vehiclePreference:', trip.vehiclePreference);
+        if (!tripData.organizationId) {
+            return res.status(400).json({ error: 'Organization ID could not be determined' });
+        }
 
+        const trip = new Trip(tripData);
         await trip.save();
-
-        console.log('6. Trip object after save:', JSON.stringify(trip.toObject(), null, 2));
-        console.log('===============================');
-
         res.status(201).json(trip);
     } catch (error) {
-        console.error('Trip creation error:', error.message);
-        console.error('Error details:', error);
         res.status(400).json({ error: 'Creation failed', details: error.message });
     }
 });
 
 // PATCH /api/trips/:id/assign - Assign a driver to a trip
-router.patch('/:id/assign', async (req, res) => {
+router.patch('/:id/assign', authenticate, async (req, res) => {
     try {
         const { driverId } = req.body;
-        const trip = await Trip.findByIdAndUpdate(
-            req.params.id,
+
+        const query = { _id: req.params.id };
+        if (req.user.role === 'ORG_ADMIN') query.organizationId = req.user.organizationId;
+
+        const trip = await Trip.findOneAndUpdate(
+            query,
             { assignedDriver: driverId, status: 'ASSIGNED' },
             { new: true }
         ).populate('assignedDriver');
 
-        if (!trip) return res.status(404).json({ error: 'Trip not found' });
+        if (!trip) return res.status(404).json({ error: 'Trip not found or access denied' });
 
         // Update Driver Status to BUSY
         if (driverId) {
-            console.log(`Setting Driver ${driverId} status to BUSY`);
-            const updatedDriver = await Driver.findByIdAndUpdate(driverId, { status: 'BUSY' }, { new: true });
-            console.log('Driver updated:', updatedDriver);
+            await Driver.findByIdAndUpdate(driverId, { status: 'BUSY' }, { new: true });
         }
-
-        if (!trip) return res.status(404).json({ error: 'Trip not found' });
-
-        // Notify driver (simulated)
-        // req.io.emit(`driver_${driverId}`, { type: 'NEW_TRIP', trip });
 
         res.json(trip);
     } catch (error) {
@@ -73,52 +80,118 @@ router.patch('/:id/assign', async (req, res) => {
     }
 });
 
-// PATCH /api/trips/:id/complete - Mark a trip as completed
-router.patch('/:id/complete', async (req, res) => {
+// PATCH /api/trips/:id/accept - Driver accepts the trip
+router.patch('/:id/accept', authenticate, async (req, res) => {
     try {
-        const trip = await Trip.findById(req.params.id);
+        const query = { _id: req.params.id };
+        // Ideally verify driver is the one assigned
+        // if (req.user.role === 'DRIVER') query.assignedDriver = req.user.driverId;
 
+        const trip = await Trip.findOne(query);
         if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+        if (trip.status !== 'ASSIGNED') {
+            return res.status(400).json({ error: 'Trip must be in ASSIGNED state to accept' });
+        }
+
+        trip.status = 'ACCEPTED';
+        trip.acceptTime = new Date();
+        await trip.save();
+
+        res.json(trip);
+    } catch (error) {
+        res.status(400).json({ error: 'Accept failed', details: error.message });
+    }
+});
+
+// PATCH /api/trips/:id/start - Driver starts the trip (OTP check)
+router.patch('/:id/start', authenticate, async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const query = { _id: req.params.id };
+
+        const trip = await Trip.findOne(query);
+        if (!trip) return res.status(404).json({ error: 'Trip not found' });
+
+        if (trip.status !== 'ACCEPTED') {
+            // Allow starting if just assigned? Flow says Accept -> Start. 
+            // Let's enforce Accept first, or allow ASSIGNED -> STARTED if they skip accept explicitly? 
+            // Requirement says: 1. Accept 2. Start. So we enforce.
+            return res.status(400).json({ error: 'Trip must be ACCEPTED before starting' });
+        }
+
+        // OTP Validation
+        // Default OTP is '0000' as per requirements
+        // stored OTP is in trip.otp (default 0000)
+        if (otp !== trip.otp) {
+            return res.status(400).json({ error: 'Invalid OTP' });
+        }
+
+        trip.status = 'STARTED';
+        trip.startTime = new Date();
+        await trip.save();
+
+        res.json(trip);
+    } catch (error) {
+        res.status(400).json({ error: 'Start failed', details: error.message });
+    }
+});
+
+const upload = require('../middleware/upload');
+
+// PATCH /api/trips/:id/complete - Mark a trip as completed (with optional drip sheet)
+router.patch('/:id/complete', authenticate, upload.single('dripSheet'), async (req, res) => {
+    try {
+        const query = { _id: req.params.id };
+        if (req.user.role === 'ORG_ADMIN') query.organizationId = req.user.organizationId;
+
+        const trip = await Trip.findOne(query);
+        if (!trip) return res.status(404).json({ error: 'Trip not found or access denied' });
 
         // Update trip status to COMPLETED and save details
         trip.status = 'COMPLETED';
+        trip.completionTime = new Date();
+
+        // Handle file upload
+        if (req.file) {
+            trip.dripSheetImage = `/uploads/${req.file.filename}`;
+        }
 
         // Save completion details
-        if (req.body.totalKm) trip.totalKm = req.body.totalKm;
-        if (req.body.totalHours) trip.totalHours = req.body.totalHours;
-        if (req.body.tollParking) trip.tollParking = req.body.tollParking;
-        if (req.body.permit) trip.permit = req.body.permit;
-        if (req.body.extraKm) trip.extraKm = req.body.extraKm;
-        if (req.body.extraHours) trip.extraHours = req.body.extraHours;
+        if (req.body.totalKm) trip.totalKm = Number(req.body.totalKm);
+        if (req.body.totalHours) trip.totalHours = Number(req.body.totalHours);
+        if (req.body.tollParking) trip.tollParking = Number(req.body.tollParking);
+        if (req.body.permit) trip.permit = Number(req.body.permit);
+        if (req.body.extraKm) trip.extraKm = Number(req.body.extraKm);
+        if (req.body.extraHours) trip.extraHours = Number(req.body.extraHours);
 
         await trip.save();
 
         // Set driver back to ONLINE if they were assigned
         if (trip.assignedDriver) {
-            console.log(`Setting Driver ${trip.assignedDriver} status to ONLINE`);
-            const updatedDriver = await Driver.findByIdAndUpdate(
+            await Driver.findByIdAndUpdate(
                 trip.assignedDriver,
                 { status: 'ONLINE' },
                 { new: true }
             );
-            console.log('Driver updated:', updatedDriver);
         }
 
-        // Populate driver info before returning
         await trip.populate('assignedDriver');
-
         res.json(trip);
     } catch (error) {
+        console.error("Completion Error:", error);
         res.status(400).json({ error: 'Completion failed', details: error.message });
     }
 });
 
 // PATCH /api/trips/:id/cancel - Cancel a trip
-router.patch('/:id/cancel', async (req, res) => {
+router.patch('/:id/cancel', authenticate, async (req, res) => {
     try {
-        const trip = await Trip.findById(req.params.id);
+        const query = { _id: req.params.id };
+        if (req.user.role === 'ORG_ADMIN') query.organizationId = req.user.organizationId;
 
-        if (!trip) return res.status(404).json({ error: 'Trip not found' });
+        const trip = await Trip.findOne(query);
+        if (!trip) return res.status(404).json({ error: 'Trip not found or access denied' });
 
         // Update trip status to CANCELLED
         trip.status = 'CANCELLED';
@@ -126,13 +199,11 @@ router.patch('/:id/cancel', async (req, res) => {
 
         // Set driver back to ONLINE if they were assigned
         if (trip.assignedDriver) {
-            console.log(`Setting Driver ${trip.assignedDriver} status to ONLINE (trip cancelled)`);
-            const updatedDriver = await Driver.findByIdAndUpdate(
+            await Driver.findByIdAndUpdate(
                 trip.assignedDriver,
                 { status: 'ONLINE' },
                 { new: true }
             );
-            console.log('Driver updated:', updatedDriver);
         }
 
         res.json(trip);
@@ -142,10 +213,12 @@ router.patch('/:id/cancel', async (req, res) => {
 });
 
 // GET /api/trips/reports - Get consolidated trip metrics
-router.get('/reports', async (req, res) => {
+router.get('/reports', authenticate, filterByOrganization, async (req, res) => {
     try {
+        const query = { status: 'COMPLETED', ...req.organizationFilter };
+
         const result = await Trip.aggregate([
-            { $match: { status: 'COMPLETED' } },
+            { $match: query },
             {
                 $group: {
                     _id: null,
@@ -160,17 +233,9 @@ router.get('/reports', async (req, res) => {
         ]);
 
         const metrics = result.length > 0 ? result[0] : {
-            totalKm: 0,
-            totalHours: 0,
-            tollParking: 0,
-            permit: 0,
-            extraKm: 0,
-            extraHours: 0
+            totalKm: 0, totalHours: 0, tollParking: 0, permit: 0, extraKm: 0, extraHours: 0
         };
-
-        // Remove _id from response
         delete metrics._id;
-
         res.json(metrics);
     } catch (error) {
         res.status(500).json({ error: 'Reports fetch failed', details: error.message });
@@ -178,9 +243,11 @@ router.get('/reports', async (req, res) => {
 });
 
 // GET /api/trips/stats - Get trip statistics by status
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticate, filterByOrganization, async (req, res) => {
     try {
+        const query = { ...req.organizationFilter };
         const stats = await Trip.aggregate([
+            { $match: query },
             {
                 $group: {
                     _id: '$status',
@@ -189,14 +256,7 @@ router.get('/stats', async (req, res) => {
             }
         ]);
 
-        // Convert array to object with default values
-        const result = {
-            pending: 0,
-            assigned: 0,
-            completed: 0,
-            cancelled: 0
-        };
-
+        const result = { pending: 0, assigned: 0, completed: 0, cancelled: 0 };
         stats.forEach(stat => {
             const status = stat._id.toLowerCase();
             result[status] = stat.count;
@@ -208,13 +268,30 @@ router.get('/stats', async (req, res) => {
     }
 });
 
+// GET /api/trips/my-trips - Get trips for the authenticated user
+router.get('/my-trips', authenticate, async (req, res) => {
+    try {
+        const query = { userId: req.user.userId };
+        // We could also filter by organization, but userId is unique enough mostly.
+        // But for safety:
+        if (req.user.organizationId) query.organizationId = req.user.organizationId;
+
+        const trips = await Trip.find(query).sort({ createdAt: -1 }).populate('assignedDriver');
+        res.json(trips);
+    } catch (error) {
+        res.status(500).json({ error: 'Fetch failed', details: error.message });
+    }
+});
+
 // GET /api/trips - List trips
-router.get('/', async (req, res) => {
+router.get('/', authenticate, filterByOrganization, async (req, res) => {
     try {
         const { status, userId } = req.query;
-        const query = {};
+        const query = { ...req.organizationFilter };
+
         if (status) query.status = status;
         if (userId) query.userId = userId;
+
         const trips = await Trip.find(query).sort({ createdAt: -1 }).populate('assignedDriver');
         res.json(trips);
     } catch (error) {

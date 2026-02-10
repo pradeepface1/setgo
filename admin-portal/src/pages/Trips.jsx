@@ -10,7 +10,7 @@ const Trips = () => {
 
             <div className="bg-white shadow rounded-lg p-6">
                 <TripList
-                    statusFilter={['ASSIGNED', 'COMPLETED', 'CANCELLED']}
+                    statusFilter={['ASSIGNED', 'ACCEPTED', 'STARTED', 'COMPLETED', 'CANCELLED']}
                     title="Assigned & Past Trips"
                 />
             </div>

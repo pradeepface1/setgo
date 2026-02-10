@@ -38,7 +38,7 @@ const TripSchema = new mongoose.Schema({
     vehiclePreference: String,
     status: {
         type: String,
-        enum: ['PENDING', 'APPROVED', 'ASSIGNED', 'COMPLETED', 'CANCELLED'],
+        enum: ['PENDING', 'ACCEPTED', 'ASSIGNED', 'STARTED', 'COMPLETED', 'CANCELLED'],
         default: 'PENDING'
     },
     assignedDriver: {
@@ -46,10 +46,23 @@ const TripSchema = new mongoose.Schema({
         ref: 'Driver',
         default: null
     },
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: true,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
     },
+    // Trip Flow Details
+    otp: { type: String, default: '0000' }, // Default OTP as requested
+    acceptTime: Date,
+    startTime: Date,
+    completionTime: Date,
+    dripSheetImage: String, // Path to uploaded image
+
     // Trip Completion Details
     totalKm: Number,
     totalHours: Number,

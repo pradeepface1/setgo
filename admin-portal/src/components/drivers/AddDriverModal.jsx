@@ -6,7 +6,7 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        password: '12345', // Default password
+        password: '', // Default password
         vehicleModel: '',
         vehicleNumber: '',
         vehicleCategory: 'Sedan Regular',
@@ -23,13 +23,44 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
         'Bus', 'High-End Coach'
     ];
 
+    const vehicleModels = {
+        'Sedan Regular': ['Swift Dzire', 'Etios', 'Aura'],
+        'Sedan Premium': ['Benz E Class', 'BMW 5 Series', 'Audi A6'],
+        'Sedan Premium+': ['Benz S Class', 'BMW 7 Series'],
+        'SUV Regular': ['Innova Crysta', 'Ertiga'],
+        'SUV Premium': ['Innova Hycross', 'Fortuner'],
+        'Tempo Traveller': ['12 Seater Basic'],
+        'Force Premium': ['Urbania 16 Seater'],
+        'Bus': ['20 Seater', '25 Seater', '33 Seater', '40 Seater', '50 Seater'],
+        'High-End Coach': ['Commuter', 'Vellfire', 'Benz Van']
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+
+        if (name === 'vehicleCategory') {
+            setFormData(prev => ({
+                ...prev,
+                vehicleCategory: value,
+                vehicleModel: vehicleModels[value]?.[0] || '' // Reset model when category changes
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
     };
+
+    // Initialize vehicle model if empty
+    React.useEffect(() => {
+        if (!formData.vehicleModel && formData.vehicleCategory) {
+            setFormData(prev => ({
+                ...prev,
+                vehicleModel: vehicleModels[formData.vehicleCategory]?.[0] || ''
+            }));
+        }
+    }, []); // Run once on mount
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -98,20 +129,20 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
                         </div>
 
 
-                        {/* Password is set to default '12345' automatically */}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Vehicle Model *
+                                Password *
                             </label>
                             <input
-                                type="text"
-                                name="vehicleModel"
-                                value={formData.vehicleModel}
+                                type="password"
+                                name="password"
+                                value={formData.password}
                                 onChange={handleChange}
                                 required
+                                autoComplete="new-password"
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
-                                placeholder="e.g., Swift, Innova"
+                                placeholder="Enter password"
                             />
                         </div>
 
@@ -144,6 +175,23 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
                                 {vehicleCategories.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Vehicle Model *
+                            </label>
+                            <select
+                                name="vehicleModel"
+                                value={formData.vehicleModel}
+                                onChange={handleChange}
+                                required
+                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
+                            >
+                                {vehicleModels[formData.vehicleCategory]?.map(model => (
+                                    <option key={model} value={model}>{model}</option>
+                                )) || <option value="">Select Category First</option>}
                             </select>
                         </div>
 

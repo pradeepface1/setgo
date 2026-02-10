@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Car, Users, FileText, Settings, Shield } from 'lucide-react';
+import { LayoutDashboard, Car, Users, FileText, Settings, Shield, Building } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ProfileModal from './common/ProfileModal';
+import logoImage from '../assets/logo.png';
 
 const Sidebar = () => {
+    const { user } = useAuth();
+
     const navItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/trips', icon: Car, label: 'Trips' },
         { to: '/drivers', icon: Users, label: 'Drivers' },
+        ...(user?.role === 'SUPER_ADMIN' ? [{ to: '/organizations', icon: Building, label: 'Organizations' }] : []),
         { to: '/users', icon: Shield, label: 'Users' },
         { to: '/reports', icon: FileText, label: 'Reports' },
         { to: '/settings', icon: Settings, label: 'Settings' },
     ];
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const { user } = useAuth(); // Assuming AuthContext provides user
 
     return (
         <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-            <div className="h-16 flex items-center justify-center border-b border-gray-200">
-                <h1 className="text-2xl font-bold text-jubilant-600">Jubilant</h1>
+            <div className="h-36 flex items-center justify-center border-b border-gray-200 py-4">
+                <img src={logoImage} alt="SetGo" className="h-32 w-auto object-contain" onError={(e) => e.target.style.display = 'none'} />
             </div>
             <nav className="flex-1 p-4 space-y-1">
                 {navItems.map((item) => (
@@ -29,7 +32,7 @@ const Sidebar = () => {
                         to={item.to}
                         className={({ isActive }) =>
                             `flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${isActive
-                                ? 'bg-jubilant-50 text-jubilant-600'
+                                ? 'bg-gray-900 text-white shadow-md'
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                             }`
                         }
@@ -40,26 +43,19 @@ const Sidebar = () => {
                 ))}
             </nav>
             <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors" onClick={() => setIsProfileOpen(true)}>
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold">
-                        {user?.username ? user.username.charAt(0).toUpperCase() : 'A'}
-                    </div>
-                    <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-700">{user?.username || 'Admin'}</p>
-                        <p className="text-xs text-jubilant-600 font-medium">View Profile</p>
-                    </div>
-                </div>
             </div>
 
             {/* Profile Modal */}
-            {isProfileOpen && (
-                <ProfileModal
-                    isOpen={isProfileOpen}
-                    onClose={() => setIsProfileOpen(false)}
-                    user={user}
-                />
-            )}
-        </aside>
+            {
+                isProfileOpen && (
+                    <ProfileModal
+                        isOpen={isProfileOpen}
+                        onClose={() => setIsProfileOpen(false)}
+                        user={user}
+                    />
+                )
+            }
+        </aside >
     );
 };
 

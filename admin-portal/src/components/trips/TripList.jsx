@@ -3,14 +3,19 @@ import { tripService } from '../../services/api';
 import { Clock, MapPin, User, Loader2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+import AssignmentModal from './AssignmentModal';
+import TripCompletionModal from './TripCompletionModal';
+
 const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedTrip, setSelectedTrip] = useState(null);
+    const [activeCompletionTrip, setActiveCompletionTrip] = useState(null);
     const [cancellingTripId, setCancellingTripId] = useState(null);
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
+    // ... (fetchTrips and useEffect remain same) ...
     const fetchTrips = async () => {
         try {
             const data = await tripService.getTrips();
@@ -32,12 +37,10 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
 
     useEffect(() => {
         fetchTrips();
-        // Poll for updates every 30 seconds for MVP
         const interval = setInterval(fetchTrips, 30000);
         return () => clearInterval(interval);
-    }, [statusFilter]); // Re-fetch/re-filter when filter changes
+    }, [statusFilter]);
 
-    // Expose refresh to parent if needed, or use context/global state
     window.refreshTrips = fetchTrips;
 
     const handleCancelTrip = async (tripId) => {
@@ -57,6 +60,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
         }
     };
 
+    // ... (handleExportToExcel remains same) ...
     const handleExportToExcel = () => {
         let tripsToExport = trips;
 
@@ -101,10 +105,8 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
             'Created At': new Date(trip.createdAt).toLocaleString()
         }));
 
-        // Create worksheet
         const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-        // Set column widths
+        // ... (column widths) ...
         const columnWidths = [
             { wch: 25 }, // Trip ID
             { wch: 20 }, // Customer Name
@@ -124,17 +126,14 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
         ];
         worksheet['!cols'] = columnWidths;
 
-        // Create workbook
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Trips');
 
-        // Generate filename with current date (and range if selected)
         let filename = `Jubilant_Setgo_Trips`;
         if (dateFilter.start) filename += `_from_${dateFilter.start}`;
         if (dateFilter.end) filename += `_to_${dateFilter.end}`;
         filename += `_${new Date().toISOString().split('T')[0]}.xlsx`;
 
-        // Download file
         XLSX.writeFile(workbook, filename);
     };
 
@@ -143,6 +142,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
 
     return (
         <div className="bg-white shadow rounded-lg overflow-hidden">
+            {/* Header Section */}
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h3 className="text-lg font-medium leading-6 text-gray-900">{title}</h3>
 
@@ -174,7 +174,8 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                     </button>
                 </div>
             </div>
-            <ul className="divide-y divide-gray-200">
+
+            <ul className="divide-y divide-gray-800">
                 {trips.length === 0 ? (
                     <li className="px-6 py-4 text-center text-gray-500">No trips found</li>
                 ) : (
@@ -198,8 +199,11 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                                             <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                                             <p>{new Date(trip.tripDateTime).toLocaleString()}</p>
                                             <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${trip.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                                trip.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-gray-100 text-gray-800'
+                                                    trip.status === 'ASSIGNED' ? 'bg-gray-100 text-gray-800' :
+                                                        trip.status === 'STARTED' ? 'bg-orange-100 text-orange-800' :
+                                                            trip.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
+                                                                trip.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                    'bg-red-100 text-red-800'
                                                 }`}>
                                                 {trip.status}
                                             </span>
@@ -268,15 +272,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                                         </>
                                     ) : trip.status === 'ASSIGNED' ? (
                                         <button
-                                            onClick={async () => {
-                                                try {
-                                                    await tripService.completeTrip(trip._id);
-                                                    fetchTrips();
-                                                    if (onTripUpdated) onTripUpdated();
-                                                } catch (err) {
-                                                    console.error('Failed to complete trip:', err);
-                                                }
-                                            }}
+                                            onClick={() => setActiveCompletionTrip(trip)}
                                             className="font-medium text-green-600 hover:text-green-500 border border-green-600 rounded px-3 py-1"
                                         >
                                             Complete
@@ -296,22 +292,30 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                 )}
             </ul>
             {selectedTrip && (
-                <React.Suspense fallback={null}>
-                    <AssignmentModal
-                        trip={selectedTrip}
-                        onClose={() => setSelectedTrip(null)}
-                        onAssignSuccess={() => {
-                            fetchTrips();
-                            setSelectedTrip(null);
-                            if (onTripUpdated) onTripUpdated();
-                        }}
-                    />
-                </React.Suspense>
+                <AssignmentModal
+                    trip={selectedTrip}
+                    onClose={() => setSelectedTrip(null)}
+                    onAssignSuccess={() => {
+                        fetchTrips();
+                        setSelectedTrip(null);
+                        if (onTripUpdated) onTripUpdated();
+                    }}
+                />
+            )}
+            {activeCompletionTrip && (
+                <TripCompletionModal
+                    trip={activeCompletionTrip}
+                    onClose={() => setActiveCompletionTrip(null)}
+                    onComplete={() => {
+                        fetchTrips();
+                        setActiveCompletionTrip(null);
+                        if (onTripUpdated) onTripUpdated();
+                    }}
+                />
             )}
         </div>
     );
 };
 
-const AssignmentModal = React.lazy(() => import('./AssignmentModal'));
-
 export default TripList;
+

@@ -1,16 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Lock } from 'lucide-react';
-import { tripService } from '../../services/api';
+import { X, User, Lock, Building } from 'lucide-react';
+import { tripService, organizationService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) => {
+    const { user } = useAuth();
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
     const [formData, setFormData] = useState({
         username: '',
         password: '',
         confirmPassword: '',
-        role: 'admin'
+        role: 'ORG_ADMIN',
+        organizationId: ''
     });
+    const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (isOpen && isSuperAdmin) {
+            const fetchOrgs = async () => {
+                try {
+                    const data = await organizationService.getAll();
+                    setOrganizations(data);
+                } catch (err) {
+                    console.error('Failed to fetch organizations:', err);
+                    setError('Failed to load organizations');
+                }
+            };
+            fetchOrgs();
+        }
+    }, [isOpen, isSuperAdmin]);
 
     useEffect(() => {
         if (isOpen) {
@@ -19,19 +40,21 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
                     username: userToEdit.username,
                     password: '',
                     confirmPassword: '',
-                    role: userToEdit.role || 'admin'
+                    role: userToEdit.role || 'ORG_ADMIN',
+                    organizationId: userToEdit.organizationId || ''
                 });
             } else {
                 setFormData({
                     username: '',
                     password: '',
                     confirmPassword: '',
-                    role: 'admin'
+                    role: 'ORG_ADMIN',
+                    organizationId: (isSuperAdmin ? '' : user?.organizationId) || ''
                 });
             }
             setError(null);
         }
-    }, [isOpen, userToEdit]);
+    }, [isOpen, userToEdit, isSuperAdmin, user]);
 
     if (!isOpen) return null;
 
@@ -68,23 +91,29 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
             return;
         }
 
+        if (isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER') && !formData.organizationId) {
+            setError('Please select an organization');
+            setLoading(false);
+            return;
+        }
 
         try {
+            const payload = {
+                username: formData.username,
+                role: formData.role
+            };
+
+            if (formData.password) payload.password = formData.password;
+
+            // Only send organizationId if pertinent
+            if (isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER')) {
+                payload.organizationId = formData.organizationId;
+            }
+
             if (userToEdit) {
-                const updateData = { username: formData.username };
-                if (formData.password) {
-                    updateData.password = formData.password;
-                }
-                if (formData.role) {
-                    updateData.role = formData.role;
-                }
-                await tripService.updateUser(userToEdit._id, updateData);
+                await tripService.updateUser(userToEdit._id, payload);
             } else {
-                await tripService.createUser({
-                    username: formData.username,
-                    password: formData.password,
-                    role: formData.role
-                });
+                await tripService.createUser(payload);
             }
             onUserCreated();
             handleClose();
@@ -116,12 +145,12 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
                             </div>
                             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                                 <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                    {userToEdit ? 'Edit Admin User' : 'Create New Admin User'}
+                                    {userToEdit ? 'Edit User' : 'Create New User'}
                                 </h3>
                                 <div className="mt-2">
                                     <p className="text-sm text-gray-500 mb-4">
                                         {userToEdit
-                                            ? 'Update details for this admin user. Leave password blank to keep unchanged.'
+                                            ? 'Update details for this user. Leave password blank to keep unchanged.'
                                             : 'Create a new user account for accessing the admin portal.'}
                                     </p>
 
@@ -139,34 +168,64 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
                                     )}
 
                                     <form id="create-user-form" onSubmit={handleSubmit} className="space-y-4">
-                                        {/* User Type Selection */}
+                                        {/* User Role Selection */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">User Type</label>
-                                            <div className="flex gap-4">
-                                                <label className="flex items-center cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="role"
-                                                        value="admin"
-                                                        checked={formData.role === 'admin'}
-                                                        onChange={handleChange}
-                                                        className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
-                                                    />
-                                                    <span className="ml-2 text-sm text-gray-700">Admin Console Access</span>
-                                                </label>
-                                                <label className="flex items-center cursor-pointer">
-                                                    <input
-                                                        type="radio"
-                                                        name="role"
-                                                        value="commuter"
-                                                        checked={formData.role === 'commuter'}
-                                                        onChange={handleChange}
-                                                        className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
-                                                    />
-                                                    <span className="ml-2 text-sm text-gray-700">Commuter App Access</span>
-                                                </label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">User Role</label>
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex gap-4">
+                                                    <label className="flex items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="role"
+                                                            value="ORG_ADMIN"
+                                                            checked={formData.role === 'ORG_ADMIN'}
+                                                            onChange={handleChange}
+                                                            className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700">Organization Admin</span>
+                                                    </label>
+
+                                                    <label className="flex items-center cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="role"
+                                                            value="COMMUTER"
+                                                            checked={formData.role === 'COMMUTER'}
+                                                            onChange={handleChange}
+                                                            className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700">Commuter</span>
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
+
+                                        {/* Organization Dropdown (For Super Admin creating Org Admin or Commuter) */}
+                                        {isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER') && (
+                                            <div>
+                                                <label htmlFor="organizationId" className="block text-sm font-medium text-gray-700">Organization</label>
+                                                <div className="mt-1 relative rounded-md shadow-sm">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <Building className="h-5 w-5 text-gray-400" />
+                                                    </div>
+                                                    <select
+                                                        name="organizationId"
+                                                        id="organizationId"
+                                                        required
+                                                        className="focus:ring-jubilant-500 focus:border-jubilant-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
+                                                        value={formData.organizationId}
+                                                        onChange={handleChange}
+                                                    >
+                                                        <option value="">Select Organization</option>
+                                                        {organizations.map(org => (
+                                                            <option key={org._id} value={org._id}>
+                                                                {org.displayName} ({org.code})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div>
                                             <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>

@@ -28,14 +28,57 @@ export const authService = {
     }
 };
 
+const getAuthHeaders = () => {
+    const userStr = localStorage.getItem('commuterUser');
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user.token) {
+                return {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                };
+            }
+        } catch (e) {
+            console.error('Error parsing user token', e);
+        }
+    }
+    return { 'Content-Type': 'application/json' };
+};
+
 export const tripService = {
     createTrip: async (tripData) => {
         const response = await fetch(`${API_URL}/trips`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify(tripData),
         });
-        if (!response.ok) throw new Error('Failed to create trip');
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || error.details || 'Failed to create trip');
+        }
+        return response.json();
+    },
+
+    getTrips: async () => {
+        const response = await fetch(`${API_URL}/trips/my-trips`, { // Assuming my-trips endpoint exists using userId from token
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            // Fallback if my-trips doesn't exist, try /trips?userId=... but we need userId
+            // For now, let's assume /trips with auth returns user's trips if updated backend
+            // Actually backend /trips filters by userId if provided in query, but requires auth now.
+            // We can get userId from localStorage
+            const userStr = localStorage.getItem('commuterUser');
+            let userId = '';
+            if (userStr) userId = JSON.parse(userStr).user.id || JSON.parse(userStr).user._id;
+
+            const fallbackResponse = await fetch(`${API_URL}/trips?userId=${userId}`, {
+                headers: getAuthHeaders()
+            });
+            if (!fallbackResponse.ok) throw new Error('Failed to fetch trips');
+            return fallbackResponse.json();
+        }
         return response.json();
     }
 };

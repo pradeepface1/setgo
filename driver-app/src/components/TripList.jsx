@@ -33,20 +33,48 @@ function TripList({ driver, onLogout }) {
         }
     }, [driver._id, activeTab]);
 
+    const handleAccept = async (tripId) => {
+        setActioningTripId(tripId);
+        try {
+            await tripService.acceptTrip(tripId);
+            await fetchTrips();
+        } catch (err) {
+            alert('Failed to accept trip: ' + err.message);
+        } finally {
+            setActioningTripId(null);
+        }
+    };
+
+    const handleStart = async (tripId) => {
+        const otp = prompt("Enter OTP from customer (Default: 0000):", "");
+        if (otp === null) return; // Cancelled
+
+        setActioningTripId(tripId);
+        try {
+            await tripService.startTrip(tripId, otp);
+            await fetchTrips();
+        } catch (err) {
+            alert('Failed to start trip: ' + err.message);
+        } finally {
+            setActioningTripId(null);
+        }
+    };
+
     const handleCompleteClick = (trip) => {
         setCompletingTrip(trip);
     };
 
-    const handleModalComplete = async (details) => {
+    const handleModalComplete = async (formData) => {
         if (!completingTrip) return;
 
         setActioningTripId(completingTrip._id);
         try {
-            await tripService.completeTrip(completingTrip._id, details);
+            await tripService.completeTrip(completingTrip._id, formData);
             setCompletingTrip(null);
             await fetchTrips();
         } catch (err) {
-            alert('Failed to complete trip');
+            console.error(err);
+            alert('Failed to complete trip: ' + err.message);
         } finally {
             setActioningTripId(null);
         }
@@ -77,7 +105,7 @@ function TripList({ driver, onLogout }) {
         <div className="trip-list-container">
             <div className="header">
                 <div>
-                    <h1>Jubilant Setgo</h1>
+                    <h1>SetGo Driver App</h1>
                     <p className="driver-name">Welcome, {driver.name}</p>
                 </div>
                 <button onClick={handleLogout} className="logout-button">
@@ -151,13 +179,38 @@ function TripList({ driver, onLogout }) {
                                         )}
 
                                         <div className="trip-actions">
-                                            <button
-                                                onClick={() => handleCompleteClick(trip)}
-                                                disabled={actioningTripId === trip._id}
-                                                className="action-button complete"
-                                            >
-                                                {actioningTripId === trip._id ? 'Processing...' : 'Complete'}
-                                            </button>
+                                            {trip.status === 'ASSIGNED' && (
+                                                <button
+                                                    onClick={() => handleAccept(trip._id)}
+                                                    disabled={actioningTripId === trip._id}
+                                                    className="action-button accept"
+                                                    style={{ backgroundColor: '#4CAF50', color: 'white' }}
+                                                >
+                                                    {actioningTripId === trip._id ? 'Processing...' : 'Accept Trip'}
+                                                </button>
+                                            )}
+
+                                            {trip.status === 'ACCEPTED' && (
+                                                <button
+                                                    onClick={() => handleStart(trip._id)}
+                                                    disabled={actioningTripId === trip._id}
+                                                    className="action-button start"
+                                                    style={{ backgroundColor: '#2196F3', color: 'white' }}
+                                                >
+                                                    {actioningTripId === trip._id ? 'Processing...' : 'Start Trip'}
+                                                </button>
+                                            )}
+
+                                            {trip.status === 'STARTED' && (
+                                                <button
+                                                    onClick={() => handleCompleteClick(trip)}
+                                                    disabled={actioningTripId === trip._id}
+                                                    className="action-button complete"
+                                                >
+                                                    {actioningTripId === trip._id ? 'Processing...' : 'Complete Trip'}
+                                                </button>
+                                            )}
+
                                             <button
                                                 onClick={() => handleCancel(trip._id)}
                                                 disabled={actioningTripId === trip._id}
@@ -165,6 +218,11 @@ function TripList({ driver, onLogout }) {
                                             >
                                                 {actioningTripId === trip._id ? 'Processing...' : 'Cancel'}
                                             </button>
+                                        </div>
+                                        <div style={{ marginTop: '10px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
+                                            Status: <strong>{trip.status}</strong>
+                                            {trip.status === 'ACCEPTED' && <span> (Wait for passenger)</span>}
+                                            {trip.status === 'STARTED' && <span> (Trip in progress)</span>}
                                         </div>
                                     </div>
                                 ))}
