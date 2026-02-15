@@ -1,0 +1,15 @@
+appId: com.jubilant.setgo_driver
+---
+- launchApp
+- tapOn: "Login"
+- inputText: "9999999999" # E2E Driver created in Step 1
+- tapOn: "Password"
+- inputText: "1234567891" # Password set in Step 1
+- tapOn: "Submit"
+- assertVisible: "Dashboard"
+
+# Go Online
+# Assuming there is a switch or button to go online. 
+# You might need to adjust the text/id based on the actual UI component
+- tapOn: "You are Offline" # Tapping this usually toggles it or opens a toggle
+- assertVisible: "You are Online"

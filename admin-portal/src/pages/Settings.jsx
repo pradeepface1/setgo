@@ -7,6 +7,17 @@ const Settings = () => {
     // Settings component with User Management
     const { theme, timezone, updateTheme, updateTimezone } = useSettings();
 
+    // Local state for changes before saving
+    const [selectedTheme, setSelectedTheme] = useState(theme);
+    const [selectedTimezone, setSelectedTimezone] = useState(timezone);
+    const [isSaved, setIsSaved] = useState(false);
+
+    const handleSave = () => {
+        updateTheme(selectedTheme);
+        updateTimezone(selectedTimezone);
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
+    };
 
     const timezones = [
         { value: 'Asia/Kolkata', label: 'India (IST)' },
@@ -27,23 +38,14 @@ const Settings = () => {
         { value: 'system', label: 'System', icon: Monitor, description: 'Follow system preference' }
     ];
 
-
-
     return (
-        <div className="space-y-6 relative">
-
-
-
-
+        <div className="space-y-6 relative pb-20">
             <div>
                 <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage your application preferences</p>
             </div>
 
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
-                {/* User Management */}
-
-
                 {/* Theme Selection */}
                 <div className="p-6">
                     <div className="flex items-center mb-4">
@@ -55,23 +57,25 @@ const Settings = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {themeOptions.map((option) => {
                             const Icon = option.icon;
+                            // Use selectedTheme for UI state
+                            const isSelected = selectedTheme === option.value;
                             return (
                                 <button
                                     key={option.value}
-                                    onClick={() => updateTheme(option.value)}
-                                    className={`relative flex flex-col items-center p-4 border-2 rounded-lg transition-all ${theme === option.value
+                                    onClick={() => setSelectedTheme(option.value)}
+                                    className={`relative flex flex-col items-center p-4 border-2 rounded-lg transition-all ${isSelected
                                         ? 'border-jubilant-500 bg-jubilant-50 dark:bg-jubilant-900/20'
                                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                         }`}
                                 >
-                                    <Icon className={`h-8 w-8 mb-2 ${theme === option.value ? 'text-jubilant-600' : 'text-gray-400'
+                                    <Icon className={`h-8 w-8 mb-2 ${isSelected ? 'text-jubilant-600' : 'text-gray-400'
                                         }`} />
-                                    <span className={`font-medium ${theme === option.value ? 'text-jubilant-900 dark:text-jubilant-300' : 'text-gray-700 dark:text-gray-300'
+                                    <span className={`font-medium ${isSelected ? 'text-jubilant-900 dark:text-jubilant-300' : 'text-gray-700 dark:text-gray-300'
                                         }`}>
                                         {option.label}
                                     </span>
                                     <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">{option.description}</span>
-                                    {theme === option.value && (
+                                    {isSelected && (
                                         <div className="absolute top-2 right-2">
                                             <div className="h-5 w-5 bg-jubilant-500 rounded-full flex items-center justify-center">
                                                 <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -96,8 +100,8 @@ const Settings = () => {
 
                     <div className="max-w-md">
                         <select
-                            value={timezone}
-                            onChange={(e) => updateTimezone(e.target.value)}
+                            value={selectedTimezone}
+                            onChange={(e) => setSelectedTimezone(e.target.value)}
                             className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-jubilant-500 focus:border-jubilant-500 dark:bg-gray-700 dark:text-white"
                         >
                             {timezones.map((tz) => (
@@ -107,26 +111,28 @@ const Settings = () => {
                             ))}
                         </select>
                         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Current time: {new Date().toLocaleString('en-US', { timeZone: timezone })}
+                            Current time: {new Date().toLocaleString('en-US', { timeZone: selectedTimezone })}
                         </p>
                     </div>
                 </div>
 
-                {/* Additional Info */}
-                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-b-lg">
+                {/* Save Button Area */}
+                <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-b-lg flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                        </div>
                         <div className="ml-3">
-                            <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">Settings are saved automatically</h3>
-                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                Your preferences are stored locally in your browser and will persist across sessions.
-                            </p>
+                            {isSaved ? (
+                                <span className="text-black dark:text-green-400 font-bold">Settings saved successfully!</span>
+                            ) : (
+                                <span className="text-black text-sm dark:text-gray-300 font-medium">Click save to apply changes</span>
+                            )}
                         </div>
                     </div>
+                    <button
+                        onClick={handleSave}
+                        className="px-6 py-2 bg-jubilant-600 text-black font-bold rounded-md hover:bg-jubilant-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-jubilant-500 shadow-sm"
+                    >
+                        Save Preferences
+                    </button>
                 </div>
             </div>
         </div>

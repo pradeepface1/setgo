@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { tripService } from '../../services/api';
+import { tripService, organizationService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const AddDriverModal = ({ onClose, onDriverAdded }) => {
+    const { user } = useAuth();
+    const [organizations, setOrganizations] = useState([]);
+
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -11,7 +15,8 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
         vehicleNumber: '',
         vehicleCategory: 'Sedan Regular',
         status: 'OFFLINE',
-        rating: 5.0
+        rating: 5.0,
+        organizationId: '' // For Super Admin
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -60,7 +65,23 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
                 vehicleModel: vehicleModels[formData.vehicleCategory]?.[0] || ''
             }));
         }
-    }, []); // Run once on mount
+
+        const fetchOrgs = async () => {
+            if (user?.role === 'SUPER_ADMIN') {
+                try {
+                    const orgs = await organizationService.getAll();
+                    setOrganizations(orgs);
+                    // Default to first org if available
+                    if (orgs.length > 0 && !formData.organizationId) {
+                        setFormData(prev => ({ ...prev, organizationId: orgs[0]._id }));
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch orgs', error);
+                }
+            }
+        };
+        fetchOrgs();
+    }, [user]); // Run on mount or user change
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -110,6 +131,28 @@ const AddDriverModal = ({ onClose, onDriverAdded }) => {
                                 placeholder="e.g., John Doe"
                             />
                         </div>
+
+                        {user?.role === 'SUPER_ADMIN' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Organization *
+                                </label>
+                                <select
+                                    name="organizationId"
+                                    value={formData.organizationId}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
+                                >
+                                    <option value="">Select Organization</option>
+                                    {organizations.map(org => (
+                                        <option key={org._id} value={org._id}>
+                                            {org.displayName || org.name} ({org.code})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

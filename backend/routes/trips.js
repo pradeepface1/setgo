@@ -107,24 +107,13 @@ router.patch('/:id/accept', authenticate, async (req, res) => {
 // PATCH /api/trips/:id/start - Driver starts the trip (OTP check)
 router.patch('/:id/start', authenticate, async (req, res) => {
     try {
-        const { otp } = req.body;
         const query = { _id: req.params.id };
 
         const trip = await Trip.findOne(query);
         if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
         if (trip.status !== 'ACCEPTED') {
-            // Allow starting if just assigned? Flow says Accept -> Start. 
-            // Let's enforce Accept first, or allow ASSIGNED -> STARTED if they skip accept explicitly? 
-            // Requirement says: 1. Accept 2. Start. So we enforce.
             return res.status(400).json({ error: 'Trip must be ACCEPTED before starting' });
-        }
-
-        // OTP Validation
-        // Default OTP is '0000' as per requirements
-        // stored OTP is in trip.otp (default 0000)
-        if (otp !== trip.otp) {
-            return res.status(400).json({ error: 'Invalid OTP' });
         }
 
         trip.status = 'STARTED';
@@ -271,7 +260,7 @@ router.get('/stats', authenticate, filterByOrganization, async (req, res) => {
 // GET /api/trips/my-trips - Get trips for the authenticated user
 router.get('/my-trips', authenticate, async (req, res) => {
     try {
-        const query = { userId: req.user.userId };
+        const query = { userId: req.userId };
         // We could also filter by organization, but userId is unique enough mostly.
         // But for safety:
         if (req.user.organizationId) query.organizationId = req.user.organizationId;

@@ -74,6 +74,9 @@ const TripHistory = () => {
                                 Driver
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-black">
+                                Vehicle
+                            </th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-black">
                                 Mobile
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-black">
@@ -119,6 +122,13 @@ const TripHistory = () => {
                                         </div>
                                     ) : (
                                         <span className="text-gray-400 italic">Unassigned</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b border-black">
+                                    {trip.assignedDriver ? (
+                                        <div className="text-sm text-gray-900">{trip.assignedDriver.vehicleNumber}</div>
+                                    ) : (
+                                        <span className="text-gray-400">-</span>
                                     )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-b border-black">

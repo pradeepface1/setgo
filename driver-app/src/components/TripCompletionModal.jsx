@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './TripCompletionModal.css';
 
 function TripCompletionModal({ trip, onClose, onComplete }) {
@@ -12,6 +12,17 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
         dripSheet: null
     });
     const [submitting, setSubmitting] = useState(false);
+
+    // Auto-calculate hours on mount
+    useEffect(() => {
+        if (trip.startTime) {
+            const start = new Date(trip.startTime);
+            const end = new Date();
+            const diffMs = end - start;
+            const hours = (diffMs / (1000 * 60 * 60)).toFixed(2);
+            setFormData(prev => ({ ...prev, totalHours: hours }));
+        }
+    }, [trip.startTime]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -90,8 +101,10 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
                             name="totalHours"
                             value={formData.totalHours}
                             onChange={handleChange}
-                            placeholder="e.g. 8.5"
+                            placeholder="Auto-calculated"
                             required
+                            readOnly
+                            style={{ backgroundColor: '#f3f4f6' }}
                         />
                     </div>
 

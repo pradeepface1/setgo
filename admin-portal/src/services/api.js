@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// Force correct production URL for Staging if env missing
+const API_URL = import.meta.env.VITE_API_URL || 'https://backend-191882634358.asia-south1.run.app/api';
+console.log('SetGo Admin Portal Loaded (v2-Staging)');
+console.log('API URL Configured:', API_URL);
 
 // Helper to get auth headers
 const getAuthHeaders = () => {
@@ -304,6 +307,21 @@ export const sosService = {
             body: JSON.stringify({ resolvedBy: adminId || 'admin' })
         });
         if (!response.ok) throw new Error('SOS resolve failed');
+        return response.json();
+    }
+};
+
+export const aiService = {
+    query: async (prompt, context) => {
+        const response = await fetch(`${API_URL}/ai/query`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ prompt, context })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'AI request failed');
+        }
         return response.json();
     }
 };

@@ -4,12 +4,26 @@ import { tripService, sosService } from '../services/api';
 import { VEHICLE_CATEGORIES } from '../config/vehicles';
 import './TripRequestForm.css';
 
+const PICKUP_TYPES = [
+    { value: 'AIRPORT', label: 'Airport' },
+    { value: 'RAILWAY_STATION', label: 'Railway Station' },
+    { value: 'BUS_STAND', label: 'Bus Stand' },
+    { value: 'OTHERS', label: 'Others' }
+];
+
 function TripRequestForm() {
     const { user, logout } = useAuth();
     const [formData, setFormData] = useState({
         customerName: '',
         customerPhone: '',
+        pickupType: 'OTHERS',
         pickupLocation: '',
+        googleLocation: '',
+        pickupContext: {
+            flightNumber: '',
+            trainNumber: '',
+            busNumber: ''
+        },
         dropLocation: '',
         tripDateTime: '',
         vehicleCategory: '',
@@ -22,6 +36,48 @@ function TripRequestForm() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+
+        // Context fields handling
+        if (['flightNumber', 'trainNumber', 'busNumber'].includes(name)) {
+            setFormData(prev => ({
+                ...prev,
+                pickupContext: {
+                    ...prev.pickupContext,
+                    [name]: value
+                }
+            }));
+            return;
+        }
+
+        // Phone number validation: only allow numbers and max 10 digits
+        if (name === 'customerPhone') {
+            const numericValue = value.replace(/\D/g, '').slice(0, 10);
+            setFormData(prev => ({
+                ...prev,
+                [name]: numericValue
+            }));
+            return;
+        }
+
+        // Pickup Type handling
+        if (name === 'pickupType') {
+            let newPickupLocation = '';
+            if (value === 'AIRPORT') newPickupLocation = 'Airport';
+            // Keep location empty/manual for others or let user type detailed station name
+
+            setFormData(prev => ({
+                ...prev,
+                pickupType: value,
+                pickupLocation: newPickupLocation,
+                pickupContext: { // Reset context on type change
+                    flightNumber: '',
+                    trainNumber: '',
+                    busNumber: ''
+                }
+            }));
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             [name]: value,
@@ -36,6 +92,36 @@ function TripRequestForm() {
         setError(null);
         setSuccess(false);
 
+        // Validation
+        if (!formData.customerName || !formData.customerPhone || !formData.tripDateTime) {
+            setError('Please fill in all mandatory fields.');
+            setLoading(false);
+            return;
+        }
+
+        if (formData.customerPhone.length !== 10) {
+            setError('Phone number must be exactly 10 digits.');
+            setLoading(false);
+            return;
+        }
+
+        // Flight/Train/Bus Mandatory Check
+        if (formData.pickupType === 'AIRPORT' && !formData.pickupContext.flightNumber) {
+            setError('Flight Number is mandatory for Airport pickups.');
+            setLoading(false);
+            return;
+        }
+        if (formData.pickupType === 'RAILWAY_STATION' && !formData.pickupContext.trainNumber) {
+            setError('Train Number is mandatory for Railway Station pickups.');
+            setLoading(false);
+            return;
+        }
+        if (formData.pickupType === 'BUS_STAND' && !formData.pickupContext.busNumber) {
+            setError('Bus Number is mandatory for Bus Stand pickups.');
+            setLoading(false);
+            return;
+        }
+
         try {
             const tripData = {
                 ...formData,
@@ -49,7 +135,14 @@ function TripRequestForm() {
             setFormData({
                 customerName: '',
                 customerPhone: '',
+                pickupType: 'OTHERS',
                 pickupLocation: '',
+                googleLocation: '',
+                pickupContext: {
+                    flightNumber: '',
+                    trainNumber: '',
+                    busNumber: ''
+                },
                 dropLocation: '',
                 tripDateTime: '',
                 vehicleCategory: '',
@@ -150,6 +243,70 @@ function TripRequestForm() {
                     />
                 </div>
 
+                {/* Pickup Type Dropdown */}
+                <div className="form-group">
+                    <label htmlFor="pickupType">Pickup Type *</label>
+                    <select
+                        id="pickupType"
+                        name="pickupType"
+                        value={formData.pickupType}
+                        onChange={handleChange}
+                        required
+                    >
+                        {PICKUP_TYPES.map(type => (
+                            <option key={type.value} value={type.value}>
+                                {type.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Conditional Inputs based on Pickup Type */}
+                {formData.pickupType === 'AIRPORT' && (
+                    <div className="form-group">
+                        <label htmlFor="flightNumber">Flight Number *</label>
+                        <input
+                            type="text"
+                            id="flightNumber"
+                            name="flightNumber"
+                            value={formData.pickupContext.flightNumber}
+                            onChange={handleChange}
+                            required
+                            placeholder="e.g., AI-101"
+                        />
+                    </div>
+                )}
+
+                {formData.pickupType === 'RAILWAY_STATION' && (
+                    <div className="form-group">
+                        <label htmlFor="trainNumber">Train Number *</label>
+                        <input
+                            type="text"
+                            id="trainNumber"
+                            name="trainNumber"
+                            value={formData.pickupContext.trainNumber}
+                            onChange={handleChange}
+                            required
+                            placeholder="e.g., Shatabdi Express"
+                        />
+                    </div>
+                )}
+
+                {formData.pickupType === 'BUS_STAND' && (
+                    <div className="form-group">
+                        <label htmlFor="busNumber">Bus Number *</label>
+                        <input
+                            type="text"
+                            id="busNumber"
+                            name="busNumber"
+                            value={formData.pickupContext.busNumber}
+                            onChange={handleChange}
+                            required
+                            placeholder="e.g., KSRTC Volvo"
+                        />
+                    </div>
+                )}
+
                 <div className="form-group">
                     <label htmlFor="pickupLocation">Pickup Location *</label>
                     <input
@@ -159,7 +316,19 @@ function TripRequestForm() {
                         value={formData.pickupLocation}
                         onChange={handleChange}
                         required
-                        placeholder="Enter pickup location"
+                        placeholder={formData.pickupType === 'AIRPORT' ? 'Airport' : 'Enter specific location'}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="googleLocation">Google Maps Link (Optional)</label>
+                    <input
+                        type="text"
+                        id="googleLocation"
+                        name="googleLocation"
+                        value={formData.googleLocation}
+                        onChange={handleChange}
+                        placeholder="Paste Google Maps URL"
                     />
                 </div>
 

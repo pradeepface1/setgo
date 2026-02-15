@@ -82,6 +82,20 @@ router.patch('/:id', authenticate, async (req, res) => {
             console.log(`[DEBUG] Driver not found or access denied for ID ${req.params.id}`);
             return res.status(404).json({ error: 'Driver not found or access denied' });
         }
+
+        // Broadcast update via Socket.io
+        if (req.io) {
+            req.io.to('admin').emit('driverLocationUpdate', {
+                driverId: driver._id,
+                status: driver.status,
+                lat: driver.currentLocation?.lat,
+                lng: driver.currentLocation?.lng,
+                name: driver.name
+            });
+            // Also notify the driver specifically if needed
+            // req.io.to(`driver_${driver._id}`).emit('statusUpdate', { status: driver.status });
+        }
+
         console.log(`[DEBUG] Driver updated successfully: ${driver._id}`);
         res.json(driver);
     } catch (error) {

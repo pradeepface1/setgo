@@ -1,0 +1,10 @@
+appId: com.jubilant.setgo_driver
+---
+- launchApp
+- assertVisible: "Login" 
+# Note: Since the emulator restarts with fresh state or persistent state, 
+# we need to handle potential auto-login.
+# For this initial script, we just assert the app launches and shows UI.
+- tapOn:
+    text: "Login"
+    optional: true 

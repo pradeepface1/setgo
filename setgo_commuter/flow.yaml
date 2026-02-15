@@ -1,0 +1,22 @@
+appId: com.jubilant.setgo_commuter
+---
+- launchApp
+# Login Flow
+- tapOn: "Login"
+- inputText: "commuter_test" 
+- tapOn: "Password"
+- inputText: "password123"
+- tapOn: "Submit"
+
+# Trip Creation Flow
+- assertVisible: "Where to?"
+- tapOn: "Where to?"
+- inputText: "Central Mall"
+- tapOn: "Central Mall, Bangalore" # Assuming autocomplete suggestion
+- tapOn: "Drop Location"
+- inputText: "Airport"
+- tapOn: "Kempegowda International Airport"
+- tapOn: "Request Ride"
+
+# Verification
+- assertVisible: "Searching for driver..."

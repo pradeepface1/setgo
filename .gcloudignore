@@ -1,0 +1,12 @@
+# gcloudignore
+.git
+.DS_Store
+node_modules
+dist
+build
+coverage
+
+# Explicitly ensure these are not ignored if they were handled by gitignore
+!admin-portal/.env.production
+!driver-app/.env.production
+!commuter-app/.env.production

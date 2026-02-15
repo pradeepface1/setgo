@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import AssignmentModal from './AssignmentModal';
 import TripCompletionModal from './TripCompletionModal';
 
-const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
+const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refreshTrigger }) => {
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -15,7 +15,6 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
     const [cancellingTripId, setCancellingTripId] = useState(null);
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
-    // ... (fetchTrips and useEffect remain same) ...
     const fetchTrips = async () => {
         try {
             const data = await tripService.getTrips();
@@ -39,7 +38,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
         fetchTrips();
         const interval = setInterval(fetchTrips, 30000);
         return () => clearInterval(interval);
-    }, [statusFilter]);
+    }, [statusFilter, refreshTrigger]);
 
     window.refreshTrips = fetchTrips;
 
@@ -199,11 +198,11 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                                             <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                                             <p>{new Date(trip.tripDateTime).toLocaleString()}</p>
                                             <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${trip.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                                    trip.status === 'ASSIGNED' ? 'bg-gray-100 text-gray-800' :
-                                                        trip.status === 'STARTED' ? 'bg-orange-100 text-orange-800' :
-                                                            trip.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
-                                                                trip.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                                                    'bg-red-100 text-red-800'
+                                                trip.status === 'ASSIGNED' ? 'bg-gray-100 text-gray-800' :
+                                                    trip.status === 'STARTED' ? 'bg-orange-100 text-orange-800' :
+                                                        trip.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
+                                                            trip.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                                                'bg-red-100 text-red-800'
                                                 }`}>
                                                 {trip.status}
                                             </span>
@@ -213,7 +212,31 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips" }) => {
                                         <MapPin className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                                         <p className="truncate">
                                             <span className="font-medium text-gray-900">From:</span> {trip.pickupLocation}
-                                            <span className="mx-2">→</span>
+                                            {trip.pickupType && trip.pickupType !== 'OTHERS' && (
+                                                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                                    {trip.pickupType.replace('_', ' ')}
+                                                </span>
+                                            )}
+                                        </p>
+                                        {(trip.pickupContext?.flightNumber || trip.pickupContext?.trainNumber || trip.pickupContext?.busNumber) && (
+                                            <p className="mt-1 text-xs text-indigo-600 pl-6">
+                                                {trip.pickupContext.flightNumber && `Flight: ${trip.pickupContext.flightNumber}`}
+                                                {trip.pickupContext.trainNumber && `Train: ${trip.pickupContext.trainNumber}`}
+                                                {trip.pickupContext.busNumber && `Bus: ${trip.pickupContext.busNumber}`}
+                                            </p>
+                                        )}
+                                        {trip.googleLocation && (
+                                            <a
+                                                href={trip.googleLocation}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="mt-1 flex items-center text-xs text-blue-600 hover:text-blue-800 pl-6"
+                                            >
+                                                <MapPin className="h-3 w-3 mr-1" />
+                                                View on Google Maps
+                                            </a>
+                                        )}
+                                        <p className="truncate mt-1">
                                             <span className="font-medium text-gray-900">To:</span> {trip.dropLocation}
                                         </p>
                                     </div>

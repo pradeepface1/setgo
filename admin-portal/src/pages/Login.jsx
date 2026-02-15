@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tripService } from '../services/api';
+import logo from '../assets/logo.png';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -51,8 +52,8 @@ const Login = () => {
             <div className="w-full max-w-md">
                 {/* Logo/Brand */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-white mb-2">SetGo</h1>
-                    <p className="text-gray-400">Admin Portal</p>
+                    <img src={`${logo}?v=2`} alt="SetGo Logo" className="h-40 mx-auto mb-6" />
+                    <p className="text-gray-400 text-3xl font-bold">Admin Portal</p>
                 </div>
 
                 {/* Login Card */}

@@ -12,7 +12,8 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         // Connect to the backend socket server
-        const newSocket = io('http://localhost:5000'); // Adjust URL if needed
+        // Connect to the backend socket server
+        const newSocket = io('https://backend-191882634358.asia-south1.run.app'); // Production Backend
 
         newSocket.on('connect', () => {
             console.log('Socket connected:', newSocket.id);

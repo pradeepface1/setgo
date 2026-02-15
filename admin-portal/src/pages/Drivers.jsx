@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { tripService } from '../services/api';
-import { Search, Filter, User, Car, Phone, Download, Plus, Trash2, Lock } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { Search, Filter, User, Car, Phone, Download, Plus, Trash2, Lock, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AddDriverModal from '../components/drivers/AddDriverModal';
 import ResetPasswordModal from '../components/drivers/ResetPasswordModal';
@@ -26,6 +27,15 @@ const Drivers = () => {
         }
     }, [searchParams]);
 
+    // Auto-refresh every 60 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Auto-refreshing drivers...');
+            fetchDrivers(false); // Pass false to avoid full loading spinner if desired, or handle loading differently
+        }, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
     const handleFilterChange = (newVal) => {
         setFilter(newVal);
         // Update URL
@@ -37,14 +47,15 @@ const Drivers = () => {
         }
     };
 
-    const fetchDrivers = async () => {
+    const fetchDrivers = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const data = await tripService.getDrivers();
             setDrivers(data);
         } catch (err) {
             console.error('Failed to load drivers', err);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -55,6 +66,32 @@ const Drivers = () => {
     useEffect(() => {
         fetchDrivers();
     }, []);
+
+    const socket = useSocket();
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleLocationUpdate = (data) => {
+            // data: { driverId, lat, lng, status }
+            setDrivers(prevDrivers => prevDrivers.map(driver => {
+                if (driver._id === data.driverId) {
+                    return {
+                        ...driver,
+                        status: data.status || driver.status,
+                        currentLocation: { lat: data.lat, lng: data.lng }
+                    };
+                }
+                return driver;
+            }));
+        };
+
+        socket.on('driverLocationUpdate', handleLocationUpdate);
+
+        return () => {
+            socket.off('driverLocationUpdate', handleLocationUpdate);
+        };
+    }, [socket]);
 
     const filteredDrivers = drivers.filter(d => {
         const matchesStatus = filter === 'ALL' || d.status === filter;
@@ -117,6 +154,13 @@ const Drivers = () => {
                 <div className="flex items-baseline gap-2">
                     <h1 className="text-2xl font-semibold text-gray-900">Drivers</h1>
                     <span className="text-sm text-gray-500">({filteredDrivers.length} visible)</span>
+                    <button
+                        onClick={() => fetchDrivers()}
+                        className="ml-2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                        title="Refresh List"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <div className="relative rounded-md shadow-sm w-full sm:w-64">
@@ -278,11 +322,13 @@ const Drivers = () => {
                                                     }}
                                                     className={`text-xs font-semibold rounded-full px-2 py-1 border-0 cursor-pointer ${driver.status === 'ONLINE' ? 'bg-green-100 text-green-800' :
                                                         driver.status === 'BUSY' ? 'bg-orange-100 text-orange-800' :
-                                                            'bg-gray-100 text-gray-800'
+                                                            driver.status === 'OFFLINE' ? 'bg-red-100 text-red-800' :
+                                                                'bg-gray-100 text-gray-800'
                                                         }`}
                                                 >
                                                     <option value="ONLINE">ONLINE</option>
                                                     <option value="BUSY">BUSY</option>
+                                                    <option value="OFFLINE">OFFLINE</option>
                                                 </select>
                                                 <button
                                                     onClick={(e) => {

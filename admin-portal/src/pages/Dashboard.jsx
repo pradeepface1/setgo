@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { RefreshCw } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -33,6 +34,22 @@ const Dashboard = () => {
                 busy: drivers.filter(d => d.status === 'BUSY').length,
                 offline: drivers.filter(d => d.status === 'OFFLINE').length
             });
+
+            // Populate map with initial locations
+            const initialLocations = {};
+            drivers.forEach(d => {
+                if (d.currentLocation && d.currentLocation.lat && d.currentLocation.lng) {
+                    initialLocations[d._id] = {
+                        driverId: d._id,
+                        lat: d.currentLocation.lat,
+                        lng: d.currentLocation.lng,
+                        status: d.status,
+                        name: d.name,
+                        // speed not available in static fetch, but that's ok
+                    };
+                }
+            });
+            setDriverLocations(prev => ({ ...prev, ...initialLocations }));
         } catch (err) {
             console.error('Failed to load stats');
         }
@@ -49,13 +66,38 @@ const Dashboard = () => {
 
         const handleLocationUpdate = (data) => {
             console.log('Received location update:', data);
-            setDriverLocations(prev => ({
-                ...prev,
-                [data.driverId]: data
-            }));
+            setDriverLocations(prev => {
+                const existing = prev[data.driverId] || {};
+                return {
+                    ...prev,
+                    [data.driverId]: {
+                        ...existing, // Preserve existing fields (like name)
+                        ...data      // Update location/status
+                    }
+                };
+            });
         };
 
         socket.on('driverLocationUpdate', handleLocationUpdate);
+
+        // Also listen for general driver updates to keep names fresh
+        const handleDriverUpdate = (updatedDriver) => {
+            setDriverLocations(prev => {
+                const existing = prev[updatedDriver._id] || {};
+                // Only update if we are tracking this driver or if they are online
+                if (existing.driverId || updatedDriver.status === 'ONLINE') {
+                    return {
+                        ...prev,
+                        [updatedDriver._id]: {
+                            ...existing,
+                            ...updatedDriver,
+                            driverId: updatedDriver._id // Ensure ID consistency
+                        }
+                    };
+                }
+                return prev;
+            });
+        };
 
         return () => {
             socket.off('driverLocationUpdate', handleLocationUpdate);
@@ -66,12 +108,26 @@ const Dashboard = () => {
         if (window.refreshTrips) window.refreshTrips();
     };
 
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const handleRefresh = () => {
+        fetchStats();
+        setRefreshTrigger(prev => prev + 1);
+    };
+
     const defaultCenter = [12.9716, 77.5946]; // Bangalore center
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
+                <button
+                    onClick={handleRefresh}
+                    className="p-2 text-gray-500 hover:text-gray-700 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    title="Refresh Dashboard"
+                >
+                    <RefreshCw className="h-5 w-5" />
+                </button>
             </div>
 
             {/* Map Section */}
@@ -82,37 +138,47 @@ const Dashboard = () => {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
-                    {Object.values(driverLocations).map(driver => (
-                        <Marker key={driver.driverId} position={[driver.lat, driver.lng]}>
-                            <Popup>
-                                <div className="font-semibold">Driver: {driver.driverId}</div>
-                                <div className="text-xs">Status: {driver.status || 'Unknown'}</div>
-                                <div className="text-xs">Speed: {driver.speed ? Math.round(driver.speed * 3.6) : 0} km/h</div>
-                            </Popup>
-                        </Marker>
-                    ))}
+                    {Object.values(driverLocations)
+                        .filter(driver => driver.status !== 'OFFLINE')
+                        .map(driver => (
+                            <Marker key={driver.driverId} position={[driver.lat, driver.lng]}>
+                                <Tooltip direction="top" offset={[0, -40]} opacity={1} permanent>
+                                    <span className="font-bold text-sm">{driver.name || 'Driver'}</span>
+                                </Tooltip>
+                                <Popup>
+                                    <div className="font-semibold">{driver.name || 'Unknown Driver'}</div>
+                                    <div className="text-xs">Status: {driver.status || 'Unknown'}</div>
+                                    <div className="text-xs">Speed: {driver.speed ? Math.round(driver.speed * 3.6) : 0} km/h</div>
+                                </Popup>
+                            </Marker>
+                        ))}
                 </MapContainer>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-6">
-                    <TripList onTripUpdated={fetchStats} statusFilter="PENDING" title="Pending Trips" />
+                    <TripList
+                        onTripUpdated={fetchStats}
+                        statusFilter="PENDING"
+                        title="Pending Trips"
+                        refreshTrigger={refreshTrigger}
+                    />
                 </div>
 
                 {/* Sidebar / Stats Area */}
                 <div className="space-y-6">
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h3 className="text-lg font-medium text-gray-900 mb-4">Live Status</h3>
+                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Live Status</h3>
 
                         <div className="space-y-4">
 
-                            <Link to="/drivers?status=ONLINE" className="flex justify-between items-center py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer rounded px-2 -mx-2">
-                                <span className="text-gray-600">Online Drivers</span>
+                            <Link to="/drivers?status=ONLINE" className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded px-2 -mx-2">
+                                <span className="text-gray-600 dark:text-gray-300">Online Drivers</span>
                                 <span className="text-xl font-bold text-green-600">{stats.online}</span>
                             </Link>
-                            <Link to="/drivers?status=BUSY" className="flex justify-between items-center py-2 border-b border-gray-100 hover:bg-gray-50 cursor-pointer rounded px-2 -mx-2">
-                                <span className="text-gray-600">Busy Drivers</span>
+                            <Link to="/drivers?status=BUSY" className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded px-2 -mx-2">
+                                <span className="text-gray-600 dark:text-gray-300">Busy Drivers</span>
                                 <span className="text-xl font-bold text-orange-500">{stats.busy}</span>
                             </Link>
                         </div>

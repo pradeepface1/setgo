@@ -26,8 +26,8 @@ function AppContent() {
       {/* Header */}
       <div className="header">
         <div>
-          <h1>SetGo</h1>
-          <p className="driver-name">Welcome, {user.username || 'Commuter'}</p>
+          <h1>Commuter Admin</h1>
+          <p className="driver-name">Welcome, {user.username || 'Admin'}</p>
         </div>
         <button onClick={logout} className="logout-button">
           Logout

@@ -10,6 +10,17 @@ const TripSchema = new mongoose.Schema({
     customerName: String,
     customerContact: String,
     pickupLocation: String,
+    pickupType: {
+        type: String,
+        enum: ['AIRPORT', 'RAILWAY_STATION', 'BUS_STAND', 'OTHERS'],
+        default: 'OTHERS'
+    },
+    pickupContext: {
+        flightNumber: String,
+        trainNumber: String,
+        busNumber: String
+    },
+    googleLocation: String, // URL or Coordinates
     dropLocation: String,
     tripDateTime: Date,
     userId: {
@@ -57,7 +68,7 @@ const TripSchema = new mongoose.Schema({
         default: Date.now
     },
     // Trip Flow Details
-    otp: { type: String, default: '0000' }, // Default OTP as requested
+    // Trip Flow Details
     acceptTime: Date,
     startTime: Date,
     completionTime: Date,

@@ -11,8 +11,10 @@ async function restoreAdmin() {
         console.log('MongoDB Connected');
 
         // Check if user exists
-        const email = 'admin@jubilant.com';
-        const existing = await User.findOne({ username: email });
+        // Check if user exists
+        const username = 'superadmin';
+        const email = 'superadmin@jubilant.com';
+        const existing = await User.findOne({ username: username });
 
         if (existing) {
             console.log('User already exists:', existing.username);
@@ -26,16 +28,24 @@ async function restoreAdmin() {
             const hashedPassword = await bcrypt.hash('password123', salt);
 
             const newUser = new User({
-                username: email,
+                username: username,
                 email: email,
                 password: hashedPassword,
                 role: 'SUPER_ADMIN',
                 status: 'ACTIVE',
-                permissions: ['all']
+                permissions: [
+                    'view_dashboard',
+                    'manage_drivers',
+                    'manage_commuters',
+                    'manage_trips',
+                    'view_reports',
+                    'manage_users',
+                    'manage_organizations'
+                ]
             });
 
             await newUser.save();
-            console.log('Super Admin restored:', email);
+            console.log('Super Admin restored:', username);
             console.log('Password: password123');
         }
 

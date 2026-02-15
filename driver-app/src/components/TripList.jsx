@@ -46,12 +46,13 @@ function TripList({ driver, onLogout }) {
     };
 
     const handleStart = async (tripId) => {
-        const otp = prompt("Enter OTP from customer (Default: 0000):", "");
-        if (otp === null) return; // Cancelled
+        if (!window.confirm('Are you certain you want to START this trip?')) {
+            return;
+        }
 
         setActioningTripId(tripId);
         try {
-            await tripService.startTrip(tripId, otp);
+            await tripService.startTrip(tripId); // No OTP
             await fetchTrips();
         } catch (err) {
             alert('Failed to start trip: ' + err.message);
@@ -151,7 +152,12 @@ function TripList({ driver, onLogout }) {
                                 {trips.map((trip) => (
                                     <div key={trip._id} className="trip-card">
                                         <div className="trip-header">
-                                            <span className="trip-customer">{trip.customerName}</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span className="trip-customer">{trip.customerName}</span>
+                                                <a href={`tel:${trip.customerPhone}`} className="trip-phone" style={{ fontSize: '14px', color: '#2196F3', textDecoration: 'none', marginTop: '4px' }}>
+                                                    📞 {trip.customerPhone}
+                                                </a>
+                                            </div>
                                             <span className="trip-time">
                                                 {new Date(trip.tripDateTime).toLocaleString()}
                                             </span>
@@ -161,6 +167,28 @@ function TripList({ driver, onLogout }) {
                                             <div className="route-point">
                                                 <span className="route-label">Pickup</span>
                                                 <span className="route-location">{trip.pickupLocation}</span>
+                                                {trip.pickupType && trip.pickupType !== 'OTHERS' && (
+                                                    <span style={{ fontSize: '12px', backgroundColor: '#e0e7ff', color: '#3730a3', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>
+                                                        {trip.pickupType.replace('_', ' ')}
+                                                    </span>
+                                                )}
+                                                {(trip.pickupContext?.flightNumber || trip.pickupContext?.trainNumber || trip.pickupContext?.busNumber) && (
+                                                    <div style={{ fontSize: '13px', color: '#d97706', marginTop: '4px', fontWeight: '500' }}>
+                                                        {trip.pickupContext.flightNumber && `✈️ Flight: ${trip.pickupContext.flightNumber}`}
+                                                        {trip.pickupContext.trainNumber && `🚆 Train: ${trip.pickupContext.trainNumber}`}
+                                                        {trip.pickupContext.busNumber && `🚌 Bus: ${trip.pickupContext.busNumber}`}
+                                                    </div>
+                                                )}
+                                                {trip.googleLocation && (
+                                                    <a
+                                                        href={trip.googleLocation}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ display: 'inline-flex', alignItems: 'center', marginTop: '8px', padding: '6px 12px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '20px', textDecoration: 'none', fontSize: '13px', fontWeight: '500' }}
+                                                    >
+                                                        📍 Navigate to Pickup
+                                                    </a>
+                                                )}
                                             </div>
                                             <div className="route-arrow">→</div>
                                             <div className="route-point">
@@ -227,25 +255,30 @@ function TripList({ driver, onLogout }) {
                                     </div>
                                 ))}
                             </div>
-                        )}
+                        )
+                        }
                     </>
                 )}
 
                 {/* History Tab */}
-                {activeTab === 'history' && (
-                    <TripHistory driver={driver} />
-                )}
-            </div>
+                {
+                    activeTab === 'history' && (
+                        <TripHistory driver={driver} />
+                    )
+                }
+            </div >
 
             {/* Trip Completion Modal */}
-            {completingTrip && (
-                <TripCompletionModal
-                    trip={completingTrip}
-                    onClose={() => setCompletingTrip(null)}
-                    onComplete={handleModalComplete}
-                />
-            )}
-        </div>
+            {
+                completingTrip && (
+                    <TripCompletionModal
+                        trip={completingTrip}
+                        onClose={() => setCompletingTrip(null)}
+                        onComplete={handleModalComplete}
+                    />
+                )
+            }
+        </div >
     );
 }
 

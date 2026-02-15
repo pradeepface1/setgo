@@ -55,8 +55,11 @@ function TripHistory({ driver }) {
                         <div key={trip._id} className={`history-card ${trip.status.toLowerCase()}`}>
                             <div className="history-header">
                                 <div>
-                                    <span className="trip-customer">{trip.customerName}</span>
-                                    <span className={`status-badge ${trip.status.toLowerCase()}`}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span className="trip-customer">{trip.customerName}</span>
+                                        <span style={{ fontSize: '13px', color: '#666', marginTop: '2px' }}>📞 {trip.customerPhone}</span>
+                                    </div>
+                                    <span className={`status-badge ${trip.status.toLowerCase()}`} style={{ marginTop: '4px', display: 'inline-block' }}>
                                         {trip.status}
                                     </span>
                                 </div>
@@ -69,6 +72,13 @@ function TripHistory({ driver }) {
                                 <div className="route-point">
                                     <span className="route-label">Pickup</span>
                                     <span className="route-location">{trip.pickupLocation}</span>
+                                    {(trip.pickupContext?.flightNumber || trip.pickupContext?.trainNumber || trip.pickupContext?.busNumber) && (
+                                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                                            {trip.pickupContext.flightNumber && `Flight: ${trip.pickupContext.flightNumber}`}
+                                            {trip.pickupContext.trainNumber && `Train: ${trip.pickupContext.trainNumber}`}
+                                            {trip.pickupContext.busNumber && `Bus: ${trip.pickupContext.busNumber}`}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="route-arrow">→</div>
                                 <div className="route-point">

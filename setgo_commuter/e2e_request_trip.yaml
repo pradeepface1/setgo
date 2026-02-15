@@ -1,0 +1,19 @@
+appId: com.jubilant.setgo_commuter
+---
+- launchApp
+- tapOn: "Login"
+- inputText: "commuter_e2e"
+- tapOn: "Password"
+- inputText: "password123"
+- tapOn: "Submit"
+- assertVisible: "Where to?"
+
+# Request Trip
+- tapOn: "Where to?"
+- inputText: "Central Mall"
+- tapOn: "Central Mall" 
+- tapOn: "Drop Location"
+- inputText: "Airport"
+- tapOn: "Airport"
+- tapOn: "Request Ride"
+- assertVisible: "Searching for driver..."

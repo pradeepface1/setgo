@@ -1,0 +1,16 @@
+appId: com.jubilant.setgo_driver
+---
+- launchApp
+# Assuming already logged in from Stage 2. If not, add login steps here.
+- assertVisible: "New Trip Request" 
+- tapOn: "Accept"
+- assertVisible: "Navigate to Pickup"
+
+# Start Trip
+- tapOn: "Start Trip"
+- assertVisible: "Navigate to Drop"
+
+# Complete Trip
+- tapOn: "Complete Trip"
+- assertVisible: "Trip Summary"
+- tapOn: "Close"
