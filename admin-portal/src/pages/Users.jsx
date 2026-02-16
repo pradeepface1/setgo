@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { User, UserPlus, Clock, Shield, Edit, Trash2 } from 'lucide-react';
 import CreateUserModal from '../components/users/CreateUserModal';
 import { tripService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Users = () => {
+    const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -142,20 +144,22 @@ const Users = () => {
                             </ul>
                         </div>
 
-                        {/* Super Admins */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-medium mb-4 text-purple-800">Super Admins</h3>
-                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
-                                {users.filter(u => u.role === 'SUPER_ADMIN').map(user => (
-                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
-                                        <div>
-                                            <div className="font-medium text-gray-900">{user.username}</div>
-                                        </div>
-                                        {/* No Actions for Super Admin */}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {/* Super Admins - Only visible to SUPER_ADMIN users */}
+                        {currentUser?.role === 'SUPER_ADMIN' && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="text-lg font-medium mb-4 text-purple-800">Super Admins</h3>
+                                <ul className="divide-y divide-gray-200 bg-white rounded shadow">
+                                    {users.filter(u => u.role === 'SUPER_ADMIN').map(user => (
+                                        <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
+                                            <div>
+                                                <div className="font-medium text-gray-900">{user.username}</div>
+                                            </div>
+                                            {/* No Actions for Super Admin */}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -80,6 +80,36 @@ export const tripService = {
             return fallbackResponse.json();
         }
         return response.json();
+    },
+
+    getActiveTrips: async () => {
+        // Fetch only active trips: PENDING, ASSIGNED, IN_PROGRESS
+        const response = await fetch(`${API_URL}/trips/my-trips?status=PENDING,ASSIGNED,IN_PROGRESS`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) {
+            // Fallback: fetch all trips and filter client-side
+            const userStr = localStorage.getItem('commuterUser');
+            let userId = '';
+            if (userStr) {
+                const userData = JSON.parse(userStr);
+                userId = userData.user?.id || userData.user?._id || '';
+            }
+
+            const fallbackResponse = await fetch(`${API_URL}/trips?userId=${userId}`, {
+                headers: getAuthHeaders()
+            });
+            if (!fallbackResponse.ok) throw new Error('Failed to fetch active trips');
+
+            const allTrips = await fallbackResponse.json();
+            // Filter for active statuses only
+            return allTrips.filter(trip =>
+                trip.status === 'PENDING' ||
+                trip.status === 'ASSIGNED' ||
+                trip.status === 'IN_PROGRESS'
+            );
+        }
+        return response.json();
     }
 };
 

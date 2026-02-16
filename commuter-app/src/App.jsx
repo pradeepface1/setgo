@@ -5,6 +5,7 @@ import './App.css';
 
 import { useState } from 'react';
 import TripHistory from './components/TripHistory';
+import MyTrips from './components/MyTrips';
 import { PlusCircle, History } from 'lucide-react';
 
 function AppContent() {
@@ -44,6 +45,12 @@ function AppContent() {
             Request Ride
           </button>
           <button
+            className={`tab-button ${activeTab === 'mytrips' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mytrips')}
+          >
+            My Trips
+          </button>
+          <button
             className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
             onClick={() => setActiveTab('history')}
           >
@@ -52,7 +59,9 @@ function AppContent() {
         </div>
 
         {activeTab === 'request' ? (
-          <TripRequestForm onTripCreated={() => setActiveTab('history')} />
+          <TripRequestForm onTripCreated={() => setActiveTab('mytrips')} />
+        ) : activeTab === 'mytrips' ? (
+          <MyTrips />
         ) : (
           <TripHistory />
         )}

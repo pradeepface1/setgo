@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/trip_provider.dart';
 import '../services/location_service.dart';
 import 'history_screen.dart';
+import 'my_trips_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -189,6 +190,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               accountEmail: Text(user?.username ?? 'User'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment),
+              title: const Text('My Trips'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MyTripsScreen()));
+              },
             ),
             ListTile(
               leading: const Icon(Icons.history),

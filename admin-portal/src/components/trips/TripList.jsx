@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 
 import AssignmentModal from './AssignmentModal';
 import TripCompletionModal from './TripCompletionModal';
+import EditTripModal from './EditTripModal';
 
 const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refreshTrigger }) => {
     const [trips, setTrips] = useState([]);
@@ -12,6 +13,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
     const [error, setError] = useState(null);
     const [selectedTrip, setSelectedTrip] = useState(null);
     const [activeCompletionTrip, setActiveCompletionTrip] = useState(null);
+    const [editTrip, setEditTrip] = useState(null);
     const [cancellingTripId, setCancellingTripId] = useState(null);
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
@@ -294,19 +296,35 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                                             </button>
                                         </>
                                     ) : trip.status === 'ASSIGNED' ? (
-                                        <button
-                                            onClick={() => setActiveCompletionTrip(trip)}
-                                            className="font-medium text-green-600 hover:text-green-500 border border-green-600 rounded px-3 py-1"
-                                        >
-                                            Complete
-                                        </button>
+                                        <>
+                                            <button
+                                                onClick={() => setActiveCompletionTrip(trip)}
+                                                className="font-medium text-green-600 hover:text-green-500 border border-green-600 rounded px-3 py-1"
+                                            >
+                                                Complete
+                                            </button>
+                                            <button
+                                                onClick={() => setEditTrip(trip)}
+                                                className="font-medium text-blue-600 hover:text-blue-500 border border-blue-600 rounded px-3 py-1"
+                                            >
+                                                Edit
+                                            </button>
+                                        </>
                                     ) : (
-                                        <button
-                                            className="font-medium text-gray-400 border border-gray-300 rounded px-3 py-1 cursor-not-allowed"
-                                            disabled
-                                        >
-                                            Completed
-                                        </button>
+                                        <>
+                                            <button
+                                                className="font-medium text-gray-400 border border-gray-300 rounded px-3 py-1 cursor-not-allowed"
+                                                disabled
+                                            >
+                                                {trip.status}
+                                            </button>
+                                            <button
+                                                onClick={() => setEditTrip(trip)}
+                                                className="font-medium text-blue-600 hover:text-blue-500 border border-blue-600 rounded px-3 py-1"
+                                            >
+                                                Edit
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -332,6 +350,17 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                     onComplete={() => {
                         fetchTrips();
                         setActiveCompletionTrip(null);
+                        if (onTripUpdated) onTripUpdated();
+                    }}
+                />
+            )}
+            {editTrip && (
+                <EditTripModal
+                    trip={editTrip}
+                    onClose={() => setEditTrip(null)}
+                    onTripUpdated={() => {
+                        fetchTrips();
+                        setEditTrip(null);
                         if (onTripUpdated) onTripUpdated();
                     }}
                 />

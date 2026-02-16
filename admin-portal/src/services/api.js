@@ -185,6 +185,19 @@ export const tripService = {
         return response.json();
     },
 
+    updateTrip: async (tripId, data) => {
+        const response = await fetch(`${API_URL}/trips/${tripId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Update failed');
+        }
+        return response.json();
+    },
+
     completeTrip: async (tripId, payload) => {
         const response = await fetch(`${API_URL}/trips/${tripId}/complete`, {
             method: 'PATCH',

@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import { Search, Filter, User, Car, Phone, Download, Plus, Trash2, Lock, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AddDriverModal from '../components/drivers/AddDriverModal';
+import EditDriverModal from '../components/drivers/EditDriverModal';
 import ResetPasswordModal from '../components/drivers/ResetPasswordModal';
 
 import { useSearchParams } from 'react-router-dom';
@@ -15,6 +16,7 @@ const Drivers = () => {
     // Initialize filter from URL query param, default to 'ALL'
     const [filter, setFilter] = useState(searchParams.get('status') || 'ALL');
     const [showAddModal, setShowAddModal] = useState(false);
+    const [editDriver, setEditDriver] = useState(null);
     const [passwordModalDriver, setPasswordModalDriver] = useState(null);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +24,7 @@ const Drivers = () => {
     useEffect(() => {
         // Sync state if URL changes (optional, but good for back/forward)
         const statusParam = searchParams.get('status');
-        if (statusParam && (statusParam === 'ONLINE' || statusParam === 'BUSY' || statusParam === 'ALL')) {
+        if (statusParam && (statusParam === 'ONLINE' || statusParam === 'BUSY' || statusParam === 'OFFLINE' || statusParam === 'ALL')) {
             setFilter(statusParam);
         }
     }, [searchParams]);
@@ -111,7 +113,8 @@ const Drivers = () => {
     const counts = {
         ALL: drivers.length,
         ONLINE: drivers.filter(d => d.status === 'ONLINE').length,
-        BUSY: drivers.filter(d => d.status === 'BUSY').length
+        BUSY: drivers.filter(d => d.status === 'BUSY').length,
+        OFFLINE: drivers.filter(d => d.status === 'OFFLINE').length
     };
 
     const handleExportToExcel = () => {
@@ -272,6 +275,7 @@ const Drivers = () => {
                             <option value="ALL">All Status ({counts.ALL})</option>
                             <option value="ONLINE">Online ({counts.ONLINE})</option>
                             <option value="BUSY">Busy ({counts.BUSY})</option>
+                            <option value="OFFLINE">Offline ({counts.OFFLINE})</option>
                         </select>
                     </div>
                 </div>
@@ -341,6 +345,18 @@ const Drivers = () => {
                                                     <Lock className="h-4 w-4" />
                                                 </button>
                                                 <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditDriver(driver);
+                                                    }}
+                                                    className="p-1 text-green-600 hover:text-green-900 rounded-full hover:bg-green-50"
+                                                    title="Edit Driver"
+                                                >
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                                <button
                                                     onClick={async (e) => {
                                                         e.stopPropagation(); // Prevent row click
                                                         if (window.confirm(`Are you sure you want to delete driver ${driver.name}?`)) {
@@ -388,6 +404,17 @@ const Drivers = () => {
                     driver={passwordModalDriver}
                     onClose={() => setPasswordModalDriver(null)}
                     onSuccess={() => {/* Maybe refresh list? Password change doesn't affect list usually */ }}
+                />
+            )}
+
+            {editDriver && (
+                <EditDriverModal
+                    driver={editDriver}
+                    onClose={() => setEditDriver(null)}
+                    onDriverUpdated={() => {
+                        fetchDrivers();
+                        setEditDriver(null);
+                    }}
                 />
             )}
         </div>

@@ -120,7 +120,13 @@ router.get('/:id/history', authenticate, async (req, res) => {
             status: { $in: ['COMPLETED', 'CANCELLED'] }
         }).sort({ tripDateTime: -1 });
 
-        res.json(trips);
+        // Map customerContact to customerPhone for frontend compatibility
+        const tripsWithPhone = trips.map(trip => ({
+            ...trip.toObject(),
+            customerPhone: trip.customerContact || trip.customerPhone
+        }));
+
+        res.json(tripsWithPhone);
     } catch (error) {
         res.status(500).json({ error: 'Fetch failed', details: error.message });
     }
