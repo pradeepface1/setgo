@@ -30,7 +30,8 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
             console.log('Filtered trips:', filteredTrips);
             setTrips(filteredTrips);
         } catch (err) {
-            setError('Failed to load trips');
+            console.error(err);
+            setError(err.message || 'Failed to load trips');
         } finally {
             setLoading(false);
         }

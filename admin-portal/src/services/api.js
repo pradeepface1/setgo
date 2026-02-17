@@ -22,6 +22,39 @@ const getAuthHeaders = () => {
     return { 'Content-Type': 'application/json' };
 };
 
+// Centralized response handler
+const handleResponse = async (response) => {
+    if (response.status === 401) {
+        console.warn('Unauthorized access (401). Redirecting to login.');
+        localStorage.removeItem('adminUser');
+        window.location.href = '/login';
+        throw new Error('Session expired or unauthorized. Please log in again.');
+    }
+
+    if (!response.ok) {
+        let errorMessage = 'Request failed';
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || response.statusText;
+        } catch (e) {
+            errorMessage = response.statusText || 'Unknown Connection Error';
+        }
+        throw new Error(errorMessage);
+    }
+
+    // Some endpoints might return 204 No Content
+    if (response.status === 204) {
+        return null;
+    }
+
+    try {
+        return await response.json();
+    } catch (e) {
+        console.warn('Response was OK but could not parse JSON:', e);
+        return {}; // Fallback
+    }
+};
+
 export const tripService = {
     // Authentication
     login: async (username, password) => {
@@ -30,9 +63,15 @@ export const tripService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
+
+        // Custom handling for login to not redirect on 401 (invalid credentials)
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Login failed');
+            let errorMessage = 'Login failed';
+            try {
+                const error = await response.json();
+                errorMessage = error.error || error.message || 'Login failed';
+            } catch (e) { /* ignore json parse error */ }
+            throw new Error(errorMessage);
         }
         return response.json();
     },
@@ -43,8 +82,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify({ text }),
         });
-        if (!response.ok) throw new Error('Parsing failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     createTrip: async (tripData) => {
@@ -54,8 +92,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(tripData),
         });
-        if (!response.ok) throw new Error('Creation failed');
-        const result = await response.json();
+        const result = await handleResponse(response);
         console.log('API: Received response:', result);
         return result;
     },
@@ -65,8 +102,7 @@ export const tripService = {
         const response = await fetch(`${API_URL}/trips${query}`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Fetch failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     getDrivers: async (status) => {
@@ -74,8 +110,7 @@ export const tripService = {
         const response = await fetch(`${API_URL}/drivers${query}`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Fetch drivers failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     createDriver: async (driverData) => {
@@ -84,11 +119,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(driverData),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to create driver');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     deleteDriver: async (driverId) => {
@@ -96,11 +127,7 @@ export const tripService = {
             method: 'DELETE',
             headers: getAuthHeaders(),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to delete driver');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     createUser: async (userData) => {
@@ -109,21 +136,14 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(userData),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to create user');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     getUsers: async () => {
         const response = await fetch(`${API_URL}/auth/users`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) {
-            throw new Error('Failed to fetch users');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     updateUser: async (userId, userData) => {
@@ -132,11 +152,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(userData),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to update user');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     deleteUser: async (userId) => {
@@ -144,11 +160,7 @@ export const tripService = {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to delete user');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     assignDriver: async (tripId, driverId) => {
@@ -157,9 +169,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify({ driverId }),
         });
-        if (!response.ok) throw new Error('Assignment failed');
-        if (!response.ok) throw new Error('Assignment failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     updateDriverStatus: async (driverId, status) => {
@@ -168,8 +178,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify({ status }),
         });
-        if (!response.ok) throw new Error('Update failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     updateDriver: async (driverId, data) => {
@@ -178,11 +187,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Update failed');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     updateTrip: async (tripId, data) => {
@@ -191,11 +196,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(data),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Update failed');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     completeTrip: async (tripId, payload) => {
@@ -204,8 +205,7 @@ export const tripService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(payload || {}),
         });
-        if (!response.ok) throw new Error('Completion failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     cancelTrip: async (tripId) => {
@@ -213,24 +213,21 @@ export const tripService = {
             method: 'PATCH',
             headers: getAuthHeaders(),
         });
-        if (!response.ok) throw new Error('Cancellation failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     getTripStats: async () => {
         const response = await fetch(`${API_URL}/trips/stats`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Stats fetch failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     getReports: async () => {
         const response = await fetch(`${API_URL}/trips/reports`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Reports fetch failed');
-        return response.json();
+        return handleResponse(response);
     }
 };
 
@@ -239,16 +236,14 @@ export const organizationService = {
         const response = await fetch(`${API_URL}/organizations`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch organizations');
-        return response.json();
+        return handleResponse(response);
     },
 
     getById: async (id) => {
         const response = await fetch(`${API_URL}/organizations/${id}`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch organization');
-        return response.json();
+        return handleResponse(response);
     },
 
     create: async (data) => {
@@ -257,11 +252,7 @@ export const organizationService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(data)
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to create organization');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     update: async (id, data) => {
@@ -270,11 +261,7 @@ export const organizationService = {
             headers: getAuthHeaders(),
             body: JSON.stringify(data)
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to update organization');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     delete: async (id) => {
@@ -282,19 +269,14 @@ export const organizationService = {
             method: 'DELETE',
             headers: getAuthHeaders()
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to delete organization');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     getStats: async (id) => {
         const response = await fetch(`${API_URL}/organizations/${id}/stats`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('Failed to fetch stats');
-        return response.json();
+        return handleResponse(response);
     }
 };
 
@@ -303,15 +285,13 @@ export const sosService = {
         const response = await fetch(`${API_URL}/sos/stats`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('SOS Stats fetch failed');
-        return response.json();
+        return handleResponse(response);
     },
     getAll: async () => {
         const response = await fetch(`${API_URL}/sos`, {
             headers: getAuthHeaders()
         });
-        if (!response.ok) throw new Error('SOS fetch failed');
-        return response.json();
+        return handleResponse(response);
     },
     resolve: async (id, adminId) => {
         const response = await fetch(`${API_URL}/sos/${id}/resolve`, {
@@ -319,8 +299,7 @@ export const sosService = {
             headers: getAuthHeaders(),
             body: JSON.stringify({ resolvedBy: adminId || 'admin' })
         });
-        if (!response.ok) throw new Error('SOS resolve failed');
-        return response.json();
+        return handleResponse(response);
     }
 };
 
@@ -331,10 +310,6 @@ export const aiService = {
             headers: getAuthHeaders(),
             body: JSON.stringify({ prompt, context })
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'AI request failed');
-        }
-        return response.json();
+        return handleResponse(response);
     }
 };

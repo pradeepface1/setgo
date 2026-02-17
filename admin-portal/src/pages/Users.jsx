@@ -19,7 +19,7 @@ const Users = () => {
             setUsers(data);
             setError(null);
         } catch (err) {
-            setError('Failed to load users');
+            setError(err.message || 'Failed to load users');
             console.error(err);
         } finally {
             setLoading(false);

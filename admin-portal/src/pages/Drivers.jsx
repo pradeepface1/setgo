@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { tripService } from '../services/api';
 import { useSocket } from '../context/SocketContext';
-import { Search, Filter, User, Car, Phone, Download, Plus, Trash2, Lock, RefreshCw } from 'lucide-react';
+import { Search, Filter, User, Car, Phone, Download, Plus, Trash2, Lock, RefreshCw, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AddDriverModal from '../components/drivers/AddDriverModal';
 import EditDriverModal from '../components/drivers/EditDriverModal';
@@ -18,6 +18,7 @@ const Drivers = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editDriver, setEditDriver] = useState(null);
     const [passwordModalDriver, setPasswordModalDriver] = useState(null);
+    const [error, setError] = useState(null);
 
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -54,8 +55,10 @@ const Drivers = () => {
         try {
             const data = await tripService.getDrivers();
             setDrivers(data);
+            setError(null);
         } catch (err) {
             console.error('Failed to load drivers', err);
+            setError(err.message || 'Failed to load drivers');
         } finally {
             if (showLoading) setLoading(false);
         }
@@ -280,6 +283,19 @@ const Drivers = () => {
                     </div>
                 </div>
             </div>
+
+            {error && (
+                <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <AlertCircle className="h-5 w-5 text-red-400" />
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-red-700">{error}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white shadow overflow-hidden rounded-md">
                 <ul className="divide-y divide-gray-200">

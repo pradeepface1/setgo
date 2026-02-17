@@ -7,8 +7,8 @@ async function testLogin() {
     try {
         console.log('Attempting login to:', API_URL);
         const response = await axios.post(API_URL, {
-            username: 'admin',
-            password: 'admin123'
+            username: 'superadmin',
+            password: 'password123'
         });
 
         console.log('Login Successful!');
