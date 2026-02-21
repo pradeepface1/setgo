@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Lock, Building } from 'lucide-react';
 import { tripService, organizationService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 
 const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) => {
     const { user } = useAuth();
@@ -18,11 +19,14 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const { currentVertical } = useSettings();
+
     useEffect(() => {
-        if (isOpen && isSuperAdmin) {
+        if (isOpen && isSuperAdmin && currentVertical) {
             const fetchOrgs = async () => {
                 try {
-                    const data = await organizationService.getAll();
+                    // Pass currentVertical to filter organizations, even for Super Admin
+                    const data = await organizationService.getAll(currentVertical);
                     setOrganizations(data);
                 } catch (err) {
                     console.error('Failed to fetch organizations:', err);
@@ -31,16 +35,22 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
             };
             fetchOrgs();
         }
-    }, [isOpen, isSuperAdmin]);
+    }, [isOpen, isSuperAdmin, currentVertical]);
 
     useEffect(() => {
         if (isOpen) {
+            // Determine default role based on creator's role
+            let defaultRole = 'ORG_ADMIN';
+            if (user?.role === 'LOGISTICS_ADMIN') defaultRole = 'ROAD_PILOT';
+            else if (user?.role === 'TAXI_ADMIN') defaultRole = 'COMMUTER';
+            else if (isSuperAdmin) defaultRole = 'ORG_ADMIN';
+
             if (userToEdit) {
                 setFormData({
                     username: userToEdit.username,
                     password: '',
                     confirmPassword: '',
-                    role: userToEdit.role || 'ORG_ADMIN',
+                    role: userToEdit.role || defaultRole,
                     organizationId: userToEdit.organizationId || ''
                 });
             } else {
@@ -48,7 +58,7 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
                     username: '',
                     password: '',
                     confirmPassword: '',
-                    role: 'ORG_ADMIN',
+                    role: defaultRole,
                     organizationId: (isSuperAdmin ? '' : user?.organizationId) || ''
                 });
             }
@@ -91,7 +101,7 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
             return;
         }
 
-        if (isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER') && !formData.organizationId) {
+        if (isSuperAdmin && (['ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN'].includes(formData.role)) && !formData.organizationId) {
             setError('Please select an organization');
             setLoading(false);
             return;
@@ -100,13 +110,14 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
         try {
             const payload = {
                 username: formData.username,
-                role: formData.role
+                role: formData.role,
+                vertical: currentVertical || 'TAXI' // Send current vertical context
             };
 
             if (formData.password) payload.password = formData.password;
 
             // Only send organizationId if pertinent
-            if (isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER')) {
+            if (isSuperAdmin && (['ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN'].includes(formData.role))) {
                 payload.organizationId = formData.organizationId;
             }
 
@@ -172,36 +183,58 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated, userToEdit = null }) 
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-3">User Role</label>
                                             <div className="flex flex-col gap-3">
-                                                <div className="flex gap-4">
-                                                    <label className="flex items-center cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="role"
-                                                            value="ORG_ADMIN"
-                                                            checked={formData.role === 'ORG_ADMIN'}
-                                                            onChange={handleChange}
-                                                            className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
-                                                        />
-                                                        <span className="ml-2 text-sm text-gray-700">Organization Admin</span>
-                                                    </label>
+                                                <div className="flex flex-wrap gap-4">
+                                                    {(() => {
+                                                        let availableRoles = [];
 
-                                                    <label className="flex items-center cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name="role"
-                                                            value="COMMUTER"
-                                                            checked={formData.role === 'COMMUTER'}
-                                                            onChange={handleChange}
-                                                            className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
-                                                        />
-                                                        <span className="ml-2 text-sm text-gray-700">Commuter</span>
-                                                    </label>
+                                                        // Super Admin Logic
+                                                        if (isSuperAdmin) {
+                                                            if (currentVertical === 'TAXI') {
+                                                                availableRoles = ['ORG_ADMIN'];
+                                                            } else if (currentVertical === 'LOGISTICS') {
+                                                                availableRoles = ['ORG_ADMIN', 'ROAD_PILOT'];
+                                                            }
+                                                        }
+                                                        // Org Admin / Vertical Admin Logic
+                                                        else {
+                                                            // For Taxi Admins (Org Admin in Taxi vertical)
+                                                            if (currentVertical === 'TAXI' && ['ORG_ADMIN', 'TAXI_ADMIN'].includes(user?.role)) {
+                                                                availableRoles = ['COMMUTER', 'ORG_ADMIN'];
+                                                            }
+                                                            // For Logistics Admins (Org Admin in Logistics vertical)
+                                                            else if (currentVertical === 'LOGISTICS' && ['ORG_ADMIN', 'LOGISTICS_ADMIN'].includes(user?.role)) {
+                                                                availableRoles = ['ROAD_PILOT'];
+                                                            }
+                                                        }
+
+                                                        const roleLabels = {
+                                                            'ORG_ADMIN': 'Org Admin',
+                                                            'TAXI_ADMIN': 'Car Admin',
+                                                            'LOGISTICS_ADMIN': 'Logistics Admin',
+                                                            'COMMUTER': 'Commuter',
+                                                            'ROAD_PILOT': 'Road Pilot'
+                                                        };
+
+                                                        return availableRoles.map(role => (
+                                                            <label key={role} className="flex items-center cursor-pointer">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="role"
+                                                                    value={role}
+                                                                    checked={formData.role === role}
+                                                                    onChange={handleChange}
+                                                                    className="h-4 w-4 text-jubilant-600 focus:ring-jubilant-500 border-gray-300"
+                                                                />
+                                                                <span className="ml-2 text-sm text-gray-700">{roleLabels[role] || role}</span>
+                                                            </label>
+                                                        ));
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Organization Dropdown (For Super Admin creating Org Admin or Commuter) */}
-                                        {isSuperAdmin && (formData.role === 'ORG_ADMIN' || formData.role === 'COMMUTER') && (
+                                        {/* Organization Dropdown (For Super Admin creating specific roles) */}
+                                        {isSuperAdmin && (['ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN'].includes(formData.role)) && (
                                             <div>
                                                 <label htmlFor="organizationId" className="block text-sm font-medium text-gray-700">Organization</label>
                                                 <div className="mt-1 relative rounded-md shadow-sm">

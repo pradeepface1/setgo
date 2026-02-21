@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { tripService } from '../../services/api';
+import { useSettings } from '../../context/SettingsContext';
 import { Clock, MapPin, User, Loader2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -16,19 +17,34 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
     const [editTrip, setEditTrip] = useState(null);
     const [cancellingTripId, setCancellingTripId] = useState(null);
     const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+    const [userRole, setUserRole] = useState(null);
+
+    const { currentVertical } = useSettings();
+
+    useEffect(() => {
+        const userStr = localStorage.getItem('adminUser');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                setUserRole(user.role);
+            } catch (e) {
+                console.error("Error parsing user info", e);
+            }
+        }
+    }, []);
 
     const fetchTrips = async () => {
         try {
-            const data = await tripService.getTrips();
-            console.log('Fetched trips data:', data);
-            // Filter trips if statusFilter is provided
-            let filteredTrips = data;
+            const params = {
+                vertical: currentVertical
+            };
             if (statusFilter) {
-                const statuses = Array.isArray(statusFilter) ? statusFilter : [statusFilter];
-                filteredTrips = data.filter(trip => statuses.includes(trip.status));
+                params.status = statusFilter;
             }
-            console.log('Filtered trips:', filteredTrips);
-            setTrips(filteredTrips);
+
+            const data = await tripService.getTrips(params);
+            console.log('Fetched trips data:', data);
+            setTrips(data);
         } catch (err) {
             console.error(err);
             setError(err.message || 'Failed to load trips');
@@ -41,7 +57,7 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
         fetchTrips();
         const interval = setInterval(fetchTrips, 30000);
         return () => clearInterval(interval);
-    }, [statusFilter, refreshTrigger]);
+    }, [statusFilter, refreshTrigger, currentVertical]);
 
     window.refreshTrips = fetchTrips;
 
@@ -58,7 +74,20 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
         } catch (err) {
             alert('Failed to cancel trip');
         } finally {
-            setCancellingTripId(null);
+        }
+    };
+
+    const handleDeleteTrip = async (tripId) => {
+        if (!window.confirm('Are you sure you want to PERMANENTLY delete this trip? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await tripService.deleteTrip(tripId);
+            await fetchTrips();
+            if (onTripUpdated) onTripUpdated();
+        } catch (err) {
+            alert('Failed to delete trip: ' + err.message);
         }
     };
 
@@ -326,6 +355,15 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                                                 Edit
                                             </button>
                                         </>
+                                    )}
+                                    {userRole === 'SUPER_ADMIN' && (
+                                        <button
+                                            onClick={() => handleDeleteTrip(trip._id)}
+                                            className="ml-2 font-medium text-red-900 hover:text-red-700 border border-red-900 rounded px-3 py-1 bg-red-50"
+                                            title="Delete Trip (Super Admin Only)"
+                                        >
+                                            Delete
+                                        </button>
                                     )}
                                 </div>
                             </div>

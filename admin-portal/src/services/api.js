@@ -1,4 +1,3 @@
-// Force correct production URL for Staging if env missing
 const API_URL = import.meta.env.VITE_API_URL || 'https://backend-191882634358.asia-south1.run.app/api';
 console.log('SetGo Admin Portal Loaded (v2-Staging)');
 console.log('API URL Configured:', API_URL);
@@ -97,16 +96,45 @@ export const tripService = {
         return result;
     },
 
-    getTrips: async (status) => {
-        const query = status ? `?status=${status}` : '';
+    getTrips: async (params) => {
+        let query = '';
+        if (params) {
+            if (typeof params === 'string') {
+                query = `?status=${params}`;
+            } else if (typeof params === 'object') {
+                const queryParams = new URLSearchParams();
+                if (params.status) queryParams.append('status', params.status);
+                if (params.vertical) queryParams.append('vertical', params.vertical);
+                if (params.userId) queryParams.append('userId', params.userId);
+                if (params.consignorId) queryParams.append('consignorId', params.consignorId);
+                if (params.startDate) queryParams.append('startDate', params.startDate);
+                if (params.endDate) queryParams.append('endDate', params.endDate);
+                if (params.page) queryParams.append('page', params.page);
+                if (params.limit) queryParams.append('limit', params.limit);
+                query = `?${queryParams.toString()}`;
+            }
+        }
         const response = await fetch(`${API_URL}/trips${query}`, {
             headers: getAuthHeaders()
         });
         return handleResponse(response);
     },
 
-    getDrivers: async (status) => {
-        const query = status ? `?status=${status}` : '';
+    getDrivers: async (params) => {
+        let query = '';
+        if (typeof params === 'string') {
+            query = params ? `?status=${params}` : '';
+        } else if (typeof params === 'object') {
+            const queryParams = new URLSearchParams();
+            if (params.status) queryParams.append('status', params.status);
+            if (params.vertical) queryParams.append('vertical', params.vertical);
+            if (params.category) queryParams.append('category', params.category);
+            if (params.page) queryParams.append('page', params.page);
+            if (params.limit) queryParams.append('limit', params.limit);
+            if (params.search) queryParams.append('search', params.search); // Future proofing
+            query = `?${queryParams.toString()}`;
+        }
+
         const response = await fetch(`${API_URL}/drivers${query}`, {
             headers: getAuthHeaders()
         });
@@ -216,6 +244,14 @@ export const tripService = {
         return handleResponse(response);
     },
 
+    deleteTrip: async (tripId) => {
+        const response = await fetch(`${API_URL}/trips/${tripId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        return handleResponse(response);
+    },
+
     getTripStats: async () => {
         const response = await fetch(`${API_URL}/trips/stats`, {
             headers: getAuthHeaders()
@@ -232,8 +268,9 @@ export const tripService = {
 };
 
 export const organizationService = {
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/organizations`, {
+    getAll: async (vertical) => {
+        const query = vertical ? `?vertical=${vertical}` : '';
+        const response = await fetch(`${API_URL}/organizations${query}`, {
             headers: getAuthHeaders()
         });
         return handleResponse(response);
@@ -272,6 +309,15 @@ export const organizationService = {
         return handleResponse(response);
     },
 
+    updateMyPreferences: async (preferencesData) => {
+        const response = await fetch(`${API_URL}/organizations/my-preferences`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ preferences: preferencesData })
+        });
+        return handleResponse(response);
+    },
+
     getStats: async (id) => {
         const response = await fetch(`${API_URL}/organizations/${id}/stats`, {
             headers: getAuthHeaders()
@@ -298,6 +344,67 @@ export const sosService = {
             method: 'PUT',
             headers: getAuthHeaders(),
             body: JSON.stringify({ resolvedBy: adminId || 'admin' })
+        });
+        return handleResponse(response);
+    }
+};
+
+export const consignorService = {
+    getAll: async (params) => {
+        let query = '';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.page) queryParams.append('page', params.page);
+            if (params.limit) queryParams.append('limit', params.limit);
+            if (params.search) queryParams.append('search', params.search);
+            query = `?${queryParams.toString()}`;
+        }
+        const response = await fetch(`${API_URL}/consignors${query}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    create: async (data) => {
+        const response = await fetch(`${API_URL}/consignors`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    update: async (id, data) => {
+        const response = await fetch(`${API_URL}/consignors/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    delete: async (id) => {
+        const response = await fetch(`${API_URL}/consignors/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    }
+};
+
+export const reportsService = {
+    getFinancials: async (params) => {
+        const response = await fetch(`${API_URL}/reports/financials?${new URLSearchParams(params)}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    getAging: async (params) => {
+        const response = await fetch(`${API_URL}/reports/aging?${new URLSearchParams(params)}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    getOperations: async (params) => {
+        const response = await fetch(`${API_URL}/reports/operations?${new URLSearchParams(params)}`, {
+            headers: getAuthHeaders()
         });
         return handleResponse(response);
     }

@@ -1,11 +1,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { tripService } from '../services/api';
+import { useSettings } from '../context/SettingsContext';
 import { PieChart, Pie, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Loader2, X, FileText, Clock, Map, DollarSign, Activity } from 'lucide-react';
 import TripList from '../components/trips/TripList';
 
+import LogisticsReports from './LogisticsReports';
+
 const Reports = () => {
+    const { currentVertical } = useSettings();
+
+    if (currentVertical === 'LOGISTICS') {
+        return <LogisticsReports />;
+    }
+
     const [stats, setStats] = useState(null);
 
     const [reports, setReports] = useState(null);
@@ -17,8 +26,8 @@ const Reports = () => {
         const fetchStats = async () => {
             try {
                 const [tripData, reportsData] = await Promise.all([
-                    tripService.getTripStats(),
-                    tripService.getReports()
+                    tripService.getTripStats(currentVertical),
+                    tripService.getReports(currentVertical)
                 ]);
                 setStats(tripData);
                 setReports(reportsData);
@@ -30,7 +39,7 @@ const Reports = () => {
         };
 
         fetchStats();
-    }, []);
+    }, [currentVertical]);
 
     if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin h-8 w-8 text-jubilant-600" /></div>;
     if (error) return <div className="text-red-500 p-4">{error}</div>;

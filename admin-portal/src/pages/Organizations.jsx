@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, Building, AlertCircle } from 'lucide-react';
 import { organizationService } from '../services/api';
+import { useSettings } from '../context/SettingsContext';
 
 const Organizations = () => {
     const [organizations, setOrganizations] = useState([]);
@@ -18,12 +19,15 @@ const Organizations = () => {
         contactEmail: '',
         contactPhone: '',
         address: '',
-        timezone: 'Asia/Kolkata'
+        timezone: 'Asia/Kolkata',
+        verticals: ['TAXI']
     });
+
+    const { currentVertical } = useSettings();
 
     const fetchOrganizations = async () => {
         try {
-            const data = await organizationService.getAll();
+            const data = await organizationService.getAll(currentVertical);
             setOrganizations(data);
             setLoading(false);
         } catch (err) {
@@ -34,7 +38,7 @@ const Organizations = () => {
 
     useEffect(() => {
         fetchOrganizations();
-    }, []);
+    }, [currentVertical]);
 
     const handleOpenModal = (org = null) => {
         if (org) {
@@ -46,7 +50,8 @@ const Organizations = () => {
                 contactEmail: org.contactEmail,
                 contactPhone: org.contactPhone,
                 address: org.address || '',
-                timezone: org.settings?.timezone || 'Asia/Kolkata'
+                timezone: org.settings?.timezone || 'Asia/Kolkata',
+                verticals: org.verticals || ['TAXI']
             });
         } else {
             setSelectedOrg(null);
@@ -57,7 +62,8 @@ const Organizations = () => {
                 contactEmail: '',
                 contactPhone: '',
                 address: '',
-                timezone: 'Asia/Kolkata'
+                timezone: 'Asia/Kolkata',
+                verticals: [currentVertical] // Auto-assign current vertical
             });
         }
         setIsModalOpen(true);
@@ -68,14 +74,26 @@ const Organizations = () => {
         e.preventDefault();
         try {
             if (selectedOrg) {
+                // Keep existing verticals but ensure current one is there? 
+                // Or just trust formData? 
+                // If editing, we probably shouldn't remove other verticals if it's multi-vertical.
+                // But the requirement is strict segregation.
+                // Let's assume we just save whatever is in formData.
                 await organizationService.update(selectedOrg._id, {
                     ...formData,
-                    settings: { timezone: formData.timezone }
+                    settings: { timezone: formData.timezone },
+                    verticals: [currentVertical] // Enforce current vertical on update? Or keep existing?
+                    // User asked to REMOVE the button, implying automatic assignment.
+                    // If I edit a Taxi org while in Logistics view, what happens?
+                    // I shouldn't be able to SEE a Taxi org in Logistics view.
+                    // So I must be in Taxi view to edit a Taxi org. 
+                    // So enforcing [currentVertical] is safe and correct for strict segregation.
                 });
             } else {
                 await organizationService.create({
                     ...formData,
-                    settings: { timezone: formData.timezone }
+                    settings: { timezone: formData.timezone },
+                    verticals: [currentVertical]
                 });
             }
             fetchOrganizations();
@@ -243,8 +261,6 @@ const Organizations = () => {
                                     </div>
                                 </div>
                             )}
-
-
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

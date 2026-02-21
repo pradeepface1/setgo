@@ -5,35 +5,52 @@ const jwt = require('jsonwebtoken'); // Import JWT
 const Driver = require('../models/Driver');
 const User = require('../models/User');
 const Organization = require('../models/Organization'); // Import Organization
-const { authenticate, isSuperAdmin, isOrgAdmin } = require('../middleware/auth'); // Import middleware
+const { authenticate, isSuperAdmin, isOrgAdmin, isTaxiAdmin, isLogisticsAdmin } = require('../middleware/auth'); // Import middleware
 
-// POST /api/auth/register - Create new user (Super Admin or Org Admin)
-router.post('/register', authenticate, isOrgAdmin, async (req, res) => {
+// POST /api/auth/register - Create new user
+router.post('/register', authenticate, async (req, res) => {
+    // Check permissions manually here or use a more flexible middleware
+    const allowedRoles = ['SUPER_ADMIN', 'ORG_ADMIN', 'TAXI_ADMIN', 'LOGISTICS_ADMIN'];
+    if (!allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
     try {
-        let { username, password, role, organizationId, email, permissions } = req.body;
+        let { username, password, role, organizationId, email, permissions, vertical } = req.body;
 
         if (!username || !password) {
             return res.status(400).json({ error: 'Username and password are required' });
         }
 
         // Validate role
-        const validRoles = ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER'];
+        const validRoles = ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'ROAD_PILOT'];
         if (role && !validRoles.includes(role)) {
             return res.status(400).json({ error: 'Invalid role' });
         }
 
-        // Org Admin Restrictions
-        if (req.user.role === 'ORG_ADMIN') {
+        // Admin Restrictions (Org, Taxi, Logistics)
+        if (req.user.role !== 'SUPER_ADMIN') {
             if (role === 'SUPER_ADMIN') {
-                return res.status(403).json({ error: 'Organization Admins cannot create Super Admins' });
+                return res.status(403).json({ error: 'Admins cannot create Super Admins' });
             }
+
+            // Logistics Admin can only create ROAD_PILOT
+            if (req.user.role === 'LOGISTICS_ADMIN' && role !== 'ROAD_PILOT') {
+                return res.status(403).json({ error: 'Logistics Admin can only create Road Pilots' });
+            }
+
+            // Taxi Admin / Org Admin can create Commuters (and drivers, but drivers are different model usually)
+            if (['TAXI_ADMIN', 'ORG_ADMIN'].includes(req.user.role) && role !== 'COMMUTER') {
+                // return res.status(403).json({ error: 'You can only create Commuters' });
+                // Keeping it flexible for now, but usually they create commuters
+            }
+
             // Force organizationId to match the admin's
             organizationId = req.user.organizationId._id || req.user.organizationId;
         }
 
-        // If Org Admin (created by Super Admin), organizationId is required
-        if (role === 'ORG_ADMIN' && !organizationId) {
-            return res.status(400).json({ error: 'Organization ID is required for Organization Admin' });
+        // If Admin/Commuter/Pilot (created by Super Admin), organizationId is required
+        if (['ORG_ADMIN', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'COMMUTER', 'ROAD_PILOT'].includes(role) && !organizationId) {
+            return res.status(400).json({ error: 'Organization ID is required' });
         }
 
         // Check if user exists
@@ -53,7 +70,8 @@ router.post('/register', authenticate, isOrgAdmin, async (req, res) => {
             password: hashedPassword,
             role: role || 'ORG_ADMIN',
             organizationId: role === 'SUPER_ADMIN' ? null : organizationId,
-            permissions
+            permissions,
+            vertical: vertical || 'TAXI'
         });
 
         await newUser.save();
@@ -144,7 +162,9 @@ router.post('/login', async (req, res) => {
             role: user.role,
             organizationId: user.organizationId ? user.organizationId._id : null,
             organizationName: user.organizationId ? user.organizationId.displayName : 'Super Admin',
+            organizationPreferences: user.organizationId ? user.organizationId.preferences : null,
             permissions: user.permissions,
+            vertical: user.vertical,
             token // Include token in response
         };
 
@@ -185,6 +205,7 @@ router.post('/driver/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid phone number or password' });
         }
         console.log(`[DEBUG] Found ${drivers.length} drivers for phone ${phone}`);
+        drivers.forEach(d => console.log(`[DEBUG] Found driver: ${d._id} - ${d.phone} - ${d.name}`));
 
         let driver = null;
         // Check password against all found drivers
@@ -232,6 +253,11 @@ router.post('/driver/login', async (req, res) => {
             vehicleCategory: driver.vehicleCategory,
             status: driver.status,
             rating: driver.rating,
+            vertical: driver.vertical,
+            // Owner / Lorry details for Road Pilots
+            ownerName: driver.ownerName,
+            ownerPhone: driver.ownerPhone,
+            ownerHometown: driver.ownerHometown,
             organizationId: driver.organizationId._id,
             organizationName: driver.organizationId.displayName,
             token

@@ -5,7 +5,12 @@ import Header from './Header';
 import SOSAlert from './SOSAlert';
 import AIChatWidget from './AIChatWidget';
 
+import useIdleTimeout from '../hooks/useIdleTimeout';
+
 const Layout = () => {
+    // Auto-logout after 1 minute (60000 ms) of inactivity
+    useIdleTimeout(60000);
+
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
             <SOSAlert />

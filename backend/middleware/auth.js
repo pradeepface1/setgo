@@ -64,6 +64,10 @@ const isOrgAdmin = (req, res, next) => {
     next();
 };
 
+const mongoose = require('mongoose');
+
+// ...
+
 // Add organization filter for Org Admins
 const filterByOrganization = (req, res, next) => {
     if (req.user.role === 'ORG_ADMIN') {
@@ -79,8 +83,14 @@ const filterByOrganization = (req, res, next) => {
         // Super Admin can see all organizations
         // Check if a specific organization is requested
         if (req.query.organizationId) {
-            req.organizationFilter = { organizationId: req.query.organizationId };
-            req.organizationId = req.query.organizationId;
+            try {
+                req.organizationFilter = { organizationId: new mongoose.Types.ObjectId(req.query.organizationId) };
+                req.organizationId = req.query.organizationId;
+            } catch (e) {
+                // Invalid ObjectId, maybe ignore or let it fail?
+                // If invalid, it won't match anything anyway.
+                req.organizationFilter = { organizationId: req.query.organizationId };
+            }
         } else {
             req.organizationFilter = {}; // No filter, see all
             req.organizationId = null;

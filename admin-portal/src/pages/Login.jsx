@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tripService } from '../services/api';
-import logo from '../assets/logo.png';
+import logo from '../assets/logo_new.jpg';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
     const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
+    const { t } = useTranslation();
 
     const handleChange = (e) => {
         setFormData({
@@ -33,7 +35,7 @@ const Login = () => {
 
             // Check Role - Only allow Admins
             if (response.user.role !== 'SUPER_ADMIN' && response.user.role !== 'ORG_ADMIN') {
-                setError('Access Denied: This portal is for Administrators only.');
+                setError(t('access_denied'));
                 setLoading(false);
                 return;
             }
@@ -41,7 +43,7 @@ const Login = () => {
             login(response.user);
             navigate('/');
         } catch (err) {
-            setError(err.message || 'Login failed. Please check your credentials.');
+            setError(err.message || t('login_failed'));
         } finally {
             setLoading(false);
         }
@@ -53,7 +55,7 @@ const Login = () => {
                 {/* Logo/Brand */}
                 <div className="text-center mb-8">
                     <img src={`${logo}?v=2`} alt="SetGo Logo" className="h-40 mx-auto mb-6" />
-                    <p className="text-gray-400 text-3xl font-bold">Admin Portal</p>
+                    <p className="text-gray-400 text-3xl font-bold">{t('admin_portal')}</p>
                 </div>
 
                 {/* Login Card */}
@@ -62,7 +64,7 @@ const Login = () => {
                     <div className="h-2 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
 
                     <div className="p-8">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Sign In</h2>
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-6">{t('sign_in')}</h2>
 
                         {error && (
                             <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded">
@@ -77,7 +79,7 @@ const Login = () => {
                             {/* Username */}
                             <div>
                                 <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Username
+                                    {t('username')}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -91,7 +93,7 @@ const Login = () => {
                                         value={formData.username}
                                         onChange={handleChange}
                                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                        placeholder="Enter your username"
+                                        placeholder={t('enter_username')}
                                     />
                                 </div>
                             </div>
@@ -99,7 +101,7 @@ const Login = () => {
                             {/* Password */}
                             <div>
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Password
+                                    {t('password')}
                                 </label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -113,7 +115,7 @@ const Login = () => {
                                         value={formData.password}
                                         onChange={handleChange}
                                         className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                        placeholder="Enter your password"
+                                        placeholder={t('enter_password')}
                                     />
                                 </div>
                             </div>
@@ -131,10 +133,10 @@ const Login = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Signing in...
+                                        {t('signing_in')}
                                     </>
                                 ) : (
-                                    'Sign In'
+                                    t('sign_in')
                                 )}
                             </button>
                         </form>
@@ -143,7 +145,7 @@ const Login = () => {
 
                 {/* Footer */}
                 <p className="text-center text-gray-500 text-sm mt-8">
-                    © 2026 SetGo. All rights reserved.
+                    {t('copyright')}
                 </p>
             </div>
         </div>

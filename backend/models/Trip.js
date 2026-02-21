@@ -39,7 +39,9 @@ const TripSchema = new mongoose.Schema({
             'Tempo Traveller',
             'Force Premium',
             'Bus',
-            'High End Coaches'
+            'High End Coaches',
+            // Logistics
+            'LCV', 'MCV', 'HCV', 'Container', 'Trailer'
         ]
     },
     vehicleSubcategory: {
@@ -49,7 +51,11 @@ const TripSchema = new mongoose.Schema({
     vehiclePreference: String,
     status: {
         type: String,
-        enum: ['PENDING', 'ACCEPTED', 'ASSIGNED', 'STARTED', 'COMPLETED', 'CANCELLED'],
+        enum: [
+            'PENDING', 'ACCEPTED', 'ASSIGNED', 'STARTED', 'COMPLETED', 'CANCELLED',
+            // Logistics Statuses
+            'LOADING', 'IN_TRANSIT', 'UNLOADED', 'PAYMENT_PENDING'
+        ],
         default: 'PENDING'
     },
     assignedDriver: {
@@ -80,7 +86,86 @@ const TripSchema = new mongoose.Schema({
     tollParking: Number,
     permit: Number,
     extraKm: Number,
-    extraHours: Number
+    extraHours: Number,
+
+    // ==========================================
+    // LOGISTICS SPECIFIC FIELDS
+    // ==========================================
+    consignorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Consignor'
+    },
+    loadingLocation: String,
+    unloadingLocation: String,
+    expectedWeight: Number, // Tons
+    actualWeight: Number,   // Tons
+
+    // Commercials
+    ratePerTon: Number,
+    totalFreight: Number,       // totalWeight * ratePerTon
+    commissionPercentage: Number,
+    commissionAmount: Number,
+    driverAdvance: Number,      // Paid to driver
+    driverAdvancePaymentMode: {
+        type: String,
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT'],
+        default: 'CASH'
+    },
+    consignorAdvance: Number,   // Received from consignor
+    consignorAdvancePaymentMode: {
+        type: String,
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE'],
+        default: 'CASH'
+    },
+    paymentMode: { // Deprecated mostly, but keeping for legacy
+        type: String,
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT'],
+        default: 'CASH'
+    },
+    // Calculated Balances
+    balanceReceivable: Number, // From Consignor
+    balancePayableToDriver: Number, // To Driver/Owner
+
+    // Driver Payables (Expense Side)
+    driverRatePerTon: Number,
+    driverTotalPayable: Number,
+    loadingCharge: Number,      // Costing side (payable to labor)
+    unloadingCharge: Number,    // Costing side (payable to labor)
+    driverLoadingCommission: Number, // Commission deducted from Hire Value
+    driverOtherExpenses: Number, // Additional deductable expenses
+
+    // Consignor Receivables
+    loadingMamul: Number,       // Billing side
+    consignorName: String,     // Free text name if ID not present
+
+    // Document Generation
+    hireSlipNo: Number,        // Auto-incrementing L.R. / Hire Slip Number
+
+    // Proof Documents
+    documents: [{
+        type: { type: String, enum: ['LR', 'POD', 'WEIGHT_SLIP', 'OTHER'] },
+        url: String,
+        uploadedAt: { type: Date, default: Date.now }
+    }],
+
+    // Issue Tracking
+    issues: [{
+        type: { type: String, enum: ['ACCIDENT', 'SHORTAGE', 'DELAY', 'DOC_ISSUE', 'OTHER'] },
+        description: String,
+        reportedAt: { type: Date, default: Date.now },
+        status: { type: String, enum: ['OPEN', 'RESOLVED'], default: 'OPEN' }
+    }],
+
+    consignmentItem: String, // Added field
+    loadingDate: Date,       // Added field for Logistics Loading Date
+
+    // Ad-hoc Vehicle Details (Snapshot)
+    vehicleNumber: String,
+    lorryName: String,         // Specific name of the lorry/transport co
+    ownerName: String,         // Lorry Owner Name
+    ownerPhone: String,        // Lorry Owner Phone
+    driverName: String,
+    driverPhone: String
 });
 
 // Pre-save hook for debugging

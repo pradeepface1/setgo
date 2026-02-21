@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext'; // Import useAuth
 
 const SettingsContext = createContext();
 
@@ -11,6 +12,8 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
+    const { user } = useAuth(); // Get user from AuthContext
+
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem('theme') || 'light';
     });
@@ -62,6 +65,25 @@ export const SettingsProvider = ({ children }) => {
         localStorage.setItem('timezone', timezone);
     }, [timezone]);
 
+    const [currentVertical, setCurrentVertical] = useState(() => {
+        return localStorage.getItem('vertical') || 'TAXI';
+    });
+
+    // Enforce vertical based on role
+    useEffect(() => {
+        if (user) {
+            if (user.role === 'LOGISTICS_ADMIN') {
+                setCurrentVertical('LOGISTICS');
+            } else if (user.role === 'TAXI_ADMIN') {
+                setCurrentVertical('TAXI');
+            }
+        }
+    }, [user]);
+
+    useEffect(() => {
+        localStorage.setItem('vertical', currentVertical);
+    }, [currentVertical]);
+
     const updateTheme = (newTheme) => {
         setTheme(newTheme);
     };
@@ -70,11 +92,17 @@ export const SettingsProvider = ({ children }) => {
         setTimezone(newTimezone);
     };
 
+    const toggleVertical = (vertical) => {
+        setCurrentVertical(vertical);
+    }
+
     const value = {
         theme,
         timezone,
+        currentVertical,
         updateTheme,
-        updateTimezone
+        updateTimezone,
+        toggleVertical
     };
 
     return (

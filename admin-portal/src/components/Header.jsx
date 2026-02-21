@@ -2,10 +2,12 @@ import React from 'react';
 import { Bell, Search, LogOut, User, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Header = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         logout();
@@ -22,13 +24,13 @@ const Header = () => {
                     <input
                         type="text"
                         className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-jubilant-500 focus:border-jubilant-500 sm:text-sm"
-                        placeholder="Search trips, drivers..."
+                        placeholder={t('search_placeholder')}
                     />
                 </div>
             </div>
             <div className="flex items-center space-x-4">
                 <button className="p-2 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-jubilant-500">
-                    <span className="sr-only">View notifications</span>
+                    <span className="sr-only">{t('view_notifications')}</span>
                     <Bell className="h-6 w-6" />
                 </button>
 
@@ -42,8 +44,8 @@ const Header = () => {
                             <p className="font-medium text-gray-700">{user?.username}</p>
                             <p className="text-xs text-gray-500 flex items-center">
                                 <Shield className="h-3 w-3 mr-1" />
-                                {user?.role === 'superadmin' ? 'Super Admin' :
-                                    user?.role === 'admin' ? 'Admin' : ''}
+                                {user?.role === 'superadmin' ? t('super_admin') :
+                                    user?.role === 'admin' ? t('admin') : ''}
                             </p>
                         </div>
                     </div>
@@ -52,7 +54,7 @@ const Header = () => {
                     <button
                         onClick={handleLogout}
                         className="p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                        title="Logout"
+                        title={t('logout')}
                     >
                         <LogOut className="h-5 w-5" />
                     </button>

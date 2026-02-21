@@ -3,29 +3,41 @@ import { X } from 'lucide-react';
 import { tripService, organizationService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
+const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
     const { user } = useAuth();
     const [organizations, setOrganizations] = useState([]);
+
+    const driverVertical = vertical || driver.vertical || 'TAXI';
+    const isLogistics = driverVertical === 'LOGISTICS';
 
     const [formData, setFormData] = useState({
         name: driver.name || '',
         phone: driver.phone || '',
         vehicleModel: driver.vehicleModel || '',
         vehicleNumber: driver.vehicleNumber || '',
-        vehicleCategory: driver.vehicleCategory || 'Sedan Regular',
+        vehicleCategory: driver.vehicleCategory || (isLogistics ? 'LCV' : 'Sedan Regular'),
         status: driver.status || 'OFFLINE',
         rating: driver.rating || 5.0,
-        organizationId: driver.organizationId?._id || driver.organizationId || ''
+        organizationId: driver.organizationId?._id || driver.organizationId || '',
+        // Logistics / Road Pilot owner fields
+        lorryName: driver.lorryName || '',
+        ownerName: driver.ownerName || '',
+        ownerPhone: driver.ownerPhone || '',
+        ownerHometown: driver.ownerHometown || '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const vehicleCategories = [
+    const taxiVehicleCategories = [
         'Sedan Regular', 'Sedan Premium', 'Sedan Premium+',
         'SUV Regular', 'SUV Premium',
         'Tempo Traveller', 'Force Premium',
         'Bus', 'High-End Coach'
     ];
+
+    const logisticsVehicleCategories = ['LCV', 'HCV', 'Trailer', 'Container', 'Tanker', 'Other'];
+
+    const vehicleCategories = isLogistics ? logisticsVehicleCategories : taxiVehicleCategories;
 
     const vehicleModels = {
         'Sedan Regular': ['Swift Dzire', 'Etios', 'Aura'],
@@ -44,7 +56,13 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
             if (user?.role === 'SUPER_ADMIN') {
                 try {
                     const orgs = await organizationService.getAll();
-                    setOrganizations(orgs);
+                    // Filter based on vertical if provided, else rely on driver's vertical or show all?
+                    // Safe to filter by passed vertical if available.
+                    const targetVertical = vertical || driver.vertical || 'TAXI';
+                    const filteredOrgs = orgs.filter(org =>
+                        org.verticals && org.verticals.includes(targetVertical)
+                    );
+                    setOrganizations(filteredOrgs);
                 } catch (error) {
                     console.error('Failed to fetch orgs', error);
                 }
@@ -87,8 +105,8 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-start justify-center pt-24 pb-12 z-50">
+            <div className="relative w-full max-w-2xl mx-4 p-5 border shadow-lg rounded-md bg-white">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium">Edit Driver</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
@@ -129,6 +147,17 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
                         </div>
 
                         <div>
+                            <label className="block text-sm font-medium text-gray-700">Change Password</label>
+                            <input
+                                type="text"
+                                name="password"
+                                placeholder="Leave blank to keep current"
+                                onChange={handleChange}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                            />
+                        </div>
+
+                        <div>
                             <label className="block text-sm font-medium text-gray-700">Vehicle Category *</label>
                             <select
                                 name="vehicleCategory"
@@ -144,18 +173,29 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Vehicle Model *</label>
-                            <select
-                                name="vehicleModel"
-                                value={formData.vehicleModel}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            >
-                                {vehicleModels[formData.vehicleCategory]?.map(model => (
-                                    <option key={model} value={model}>{model}</option>
-                                ))}
-                            </select>
+                            <label className="block text-sm font-medium text-gray-700">Vehicle Model {!isLogistics && '*'}</label>
+                            {isLogistics ? (
+                                <input
+                                    type="text"
+                                    name="vehicleModel"
+                                    value={formData.vehicleModel}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Lorry name or model"
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                />
+                            ) : (
+                                <select
+                                    name="vehicleModel"
+                                    value={formData.vehicleModel}
+                                    onChange={handleChange}
+                                    required
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                >
+                                    {vehicleModels[formData.vehicleCategory]?.map(model => (
+                                        <option key={model} value={model}>{model}</option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
 
                         <div>
@@ -203,6 +243,59 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated }) => {
                             </div>
                         )}
                     </div>
+
+                    {/* Owner / Lorry details — Logistics only */}
+                    {isLogistics && (
+                        <div className="border-t pt-4">
+                            <h4 className="text-sm font-semibold text-gray-600 mb-3">Owner &amp; Lorry Details</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Lorry Name</label>
+                                    <input
+                                        type="text"
+                                        name="lorryName"
+                                        value={formData.lorryName}
+                                        onChange={handleChange}
+                                        placeholder="e.g. N.S. KARUR ROADWAYS"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Owner Name</label>
+                                    <input
+                                        type="text"
+                                        name="ownerName"
+                                        value={formData.ownerName}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Murugavel"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Owner Phone</label>
+                                    <input
+                                        type="tel"
+                                        name="ownerPhone"
+                                        value={formData.ownerPhone}
+                                        onChange={handleChange}
+                                        placeholder="e.g. 9488915889"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700">Owner Hometown</label>
+                                    <input
+                                        type="text"
+                                        name="ownerHometown"
+                                        value={formData.ownerHometown}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Sangagiri"
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex justify-end gap-2 mt-6">
                         <button

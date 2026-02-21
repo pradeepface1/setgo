@@ -3,6 +3,7 @@ import { User, UserPlus, Clock, Shield, Edit, Trash2 } from 'lucide-react';
 import CreateUserModal from '../components/users/CreateUserModal';
 import { tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Users = () => {
     const { user: currentUser } = useAuth();
@@ -12,11 +13,40 @@ const Users = () => {
     const [error, setError] = useState(null);
     const [userToEdit, setUserToEdit] = useState(null);
 
+    const { currentVertical } = useSettings();
+
     const fetchUsers = async () => {
         try {
             setLoading(true);
             const data = await tripService.getUsers();
-            setUsers(data);
+
+            // Filter users based on vertical
+            // Since User model doesn't have vertical, we filter based on their organization's Vertical
+            // OR we filter based on the Role (e.g. TAXI_ADMIN vs LOGISTICS_ADMIN)
+
+            const filteredData = data.filter(u => {
+                // Super Admins see everything (or we can filter them too if requested, but usually they see all)
+                // For now, let's filter based on organization vertical if available
+
+                // 1. If User has a specific vertical assigned (New Logic), use it for strict segregation
+                if (u.vertical) {
+                    return u.vertical === currentVertical;
+                }
+
+                // 2. Fallback: If user has organization, check its vertical (Legacy or Hybrid)
+                if (u.organizationId && u.organizationId.verticals && u.organizationId.verticals.length > 0) {
+                    return u.organizationId.verticals.includes(currentVertical);
+                }
+
+                // 3. If no org, check role
+                if (currentVertical === 'LOGISTICS') {
+                    return ['LOGISTICS_ADMIN', 'ROAD_PILOT'].includes(u.role);
+                } else {
+                    return ['TAXI_ADMIN', 'ORG_ADMIN', 'COMMUTER'].includes(u.role);
+                }
+            });
+
+            setUsers(filteredData);
             setError(null);
         } catch (err) {
             setError(err.message || 'Failed to load users');
@@ -28,7 +58,7 @@ const Users = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [currentVertical]);
 
     const handleUserCreated = () => {
         fetchUsers();
@@ -106,24 +136,26 @@ const Users = () => {
                     <div className="p-12 text-center text-gray-500 text-sm">No users found. Create one to get started.</div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Commuters */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-medium mb-4 text-green-800">Commuters</h3>
-                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
-                                {users.filter(u => u.role !== 'SUPER_ADMIN' && u.role !== 'ORG_ADMIN').map(user => (
-                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
-                                        <div>
-                                            <div className="font-medium text-gray-900">{user.username}</div>
-                                            {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
-                                            <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {/* Commuters - Only visible in TAXI vertical */}
+                        {currentVertical === 'TAXI' && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="text-lg font-medium mb-4 text-green-800">Commuters</h3>
+                                <ul className="divide-y divide-gray-200 bg-white rounded shadow">
+                                    {users.filter(u => u.role !== 'SUPER_ADMIN' && u.role !== 'ORG_ADMIN').map(user => (
+                                        <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
+                                            <div>
+                                                <div className="font-medium text-gray-900">{user.username}</div>
+                                                {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
+                                                <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                         {/* Org Admins */}
                         <div className="bg-gray-50 p-4 rounded-lg">

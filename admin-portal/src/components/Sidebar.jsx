@@ -1,29 +1,70 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Car, Users, FileText, Settings, Shield, Building } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { LayoutDashboard, Car, Users, FileText, Settings, Shield, Building, Truck, Store } from 'lucide-react'; // Added Store
+import { useSettings } from '../context/SettingsContext'; // Import settings
+import { useAuth } from '../context/AuthContext'; // Re-added useAuth import
 import ProfileModal from './common/ProfileModal';
-import logoImage from '../assets/logo.png';
+import logoImage from '../assets/logo_new.jpg';
+
+import { useTranslation } from 'react-i18next'; // Import i18n hook
 
 const Sidebar = () => {
     const { user } = useAuth();
+    const { currentVertical, toggleVertical } = useSettings();
+    const { t } = useTranslation(); // Init hook
 
-    const navItems = [
-        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/trips', icon: Car, label: 'Trips' },
-        { to: '/drivers', icon: Users, label: 'Drivers' },
-        ...(user?.role === 'SUPER_ADMIN' ? [{ to: '/organizations', icon: Building, label: 'Organizations' }] : []),
-        { to: '/users', icon: Shield, label: 'Users' },
-        { to: '/reports', icon: FileText, label: 'Reports' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
+    // Define items with their allowed verticals
+    const allNavItems = [
+        { to: '/', icon: LayoutDashboard, label: t('dashboard'), verticals: ['TAXI', 'LOGISTICS'] },
+        { to: '/trips', icon: Car, label: t('trips'), verticals: ['TAXI'] },
+        { to: '/drivers', icon: Users, label: t('drivers'), verticals: ['TAXI'] },
+        { to: '/drivers', icon: Users, label: t('drivers'), verticals: ['LOGISTICS'] }, // TODO: Add specific key for Road Pilots if needed
+        { to: '/consignors', icon: Store, label: t('consignors'), verticals: ['LOGISTICS'] },
+        { to: '/logistics', icon: Truck, label: t('logistics'), verticals: ['LOGISTICS'] },
+        { to: '/users', icon: Shield, label: t('users'), verticals: ['TAXI', 'LOGISTICS'] },
+        { to: '/reports', icon: FileText, label: t('reports'), verticals: ['TAXI', 'LOGISTICS'] },
+        { to: '/settings', icon: Settings, label: t('settings'), verticals: ['TAXI', 'LOGISTICS'] },
     ];
+
+    // Filter items based on current vertical
+    const navItems = allNavItems.filter(item =>
+        item.verticals.includes(currentVertical)
+    );
+
+    // Add Organizations for Super Admin regardless of vertical
+    if (user?.role === 'SUPER_ADMIN') {
+        const orgIndex = navItems.findIndex(item => item.label === t('users')); // Match translated label
+        if (orgIndex !== -1) {
+            navItems.splice(orgIndex, 0, { to: '/organizations', icon: Building, label: t('organizations'), verticals: ['TAXI', 'LOGISTICS'] });
+        }
+    }
 
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     return (
         <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-            <div className="h-36 flex items-center justify-center border-b border-gray-200 py-4">
-                <img src={logoImage} alt="SetGo" className="h-32 w-auto object-contain" onError={(e) => e.target.style.display = 'none'} />
+            <div className="h-auto min-h-[9rem] flex flex-col items-center justify-center border-b border-gray-200 py-4">
+                <img src={logoImage} alt="SetGo" className="h-48 w-auto object-contain mb-0" onError={(e) => e.target.style.display = 'none'} />
+
+                {/* Vertical Switcher for Super Admin */}
+                {user?.role === 'SUPER_ADMIN' && (
+                    <div className="flex bg-gray-100 rounded-lg p-1 -mt-2">
+                        <button
+                            onClick={() => toggleVertical('TAXI')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${currentVertical === 'TAXI' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Taxi
+                        </button>
+                        <button
+                            onClick={() => toggleVertical('LOGISTICS')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${currentVertical === 'LOGISTICS' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Logistics
+                        </button>
+                    </div>
+                )}
             </div>
             <nav className="flex-1 p-4 space-y-1">
                 {navItems.map((item) => (

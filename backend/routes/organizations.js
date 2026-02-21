@@ -11,10 +11,14 @@ const Driver = require('../models/Driver');
 const Trip = require('../models/Trip');
 const { authenticate, isSuperAdmin, isOrgAdmin } = require('../middleware/auth');
 
-// Get all organizations (Super Admin only)
+// Get all organizations (Super Admin only, optionally filtered by vertical)
 router.get('/', authenticate, isSuperAdmin, async (req, res) => {
     try {
-        const organizations = await Organization.find().sort({ createdAt: -1 });
+        let query = {};
+        if (req.query.vertical) {
+            query.verticals = req.query.vertical;
+        }
+        const organizations = await Organization.find(query).sort({ createdAt: -1 });
         res.json(organizations);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -94,7 +98,7 @@ router.get('/:id/stats', authenticate, async (req, res) => {
 // Create organization (Super Admin only)
 router.post('/', authenticate, isSuperAdmin, async (req, res) => {
     try {
-        const { name, code, displayName, contactEmail, contactPhone, address, settings } = req.body;
+        const { name, code, displayName, contactEmail, contactPhone, address, settings, verticals } = req.body;
 
         // Validate required fields
         if (!name || !code || !displayName || !contactEmail || !contactPhone) {
@@ -121,6 +125,7 @@ router.post('/', authenticate, isSuperAdmin, async (req, res) => {
             contactEmail,
             contactPhone,
             address,
+            verticals: verticals || ['TAXI'], // Default to TAXI if not provided
             settings: settings || {
                 allowSOS: true,
                 enableReports: true,
@@ -135,10 +140,55 @@ router.post('/', authenticate, isSuperAdmin, async (req, res) => {
     }
 });
 
+// Update My Organization Preferences (For Org Admins)
+router.put('/my-preferences', authenticate, async (req, res) => {
+    try {
+        if (!req.user.organizationId) {
+            return res.status(400).json({ error: 'User does not belong to an organization' });
+        }
+
+        const organization = await Organization.findById(req.user.organizationId);
+        if (!organization) {
+            return res.status(404).json({ error: 'Organization not found' });
+        }
+
+        // Deep merge the incoming preferences
+        // Since it's nested, we'll assign the objects, but ideally we'd dot-notation it or spread.
+        // For simplicity and to allow complete override of sections:
+        if (req.body.preferences) {
+            if (req.body.preferences.theme) {
+                organization.preferences.theme = {
+                    ...organization.preferences.theme,
+                    ...req.body.preferences.theme
+                };
+            }
+            if (req.body.preferences.features) {
+                organization.preferences.features = {
+                    ...organization.preferences.features,
+                    ...req.body.preferences.features
+                };
+            }
+            if (req.body.preferences.pdfSettings) {
+                organization.preferences.pdfSettings = {
+                    ...organization.preferences.pdfSettings,
+                    ...req.body.preferences.pdfSettings
+                };
+            }
+        }
+
+        organization.updatedAt = Date.now();
+        await organization.save();
+
+        res.json(organization);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Update organization
 router.put('/:id', authenticate, isSuperAdmin, async (req, res) => {
     try {
-        const { displayName, contactEmail, contactPhone, address, settings } = req.body;
+        const { displayName, contactEmail, contactPhone, address, settings, verticals } = req.body;
 
         const organization = await Organization.findByIdAndUpdate(
             req.params.id,
@@ -148,6 +198,7 @@ router.put('/:id', authenticate, isSuperAdmin, async (req, res) => {
                 contactPhone,
                 address,
                 settings,
+                verticals, // Ensure verticals can be updated
                 updatedAt: Date.now()
             },
             { new: true, runValidators: true }

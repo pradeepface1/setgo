@@ -6,17 +6,60 @@ const bcrypt = require('bcryptjs');
 const { authenticate, filterByOrganization } = require('../middleware/auth');
 
 // GET /api/drivers - List drivers (optionally filter by status/category and organization)
+// GET /api/drivers - List drivers (optionally filter by status/category and organization)
 router.get('/', authenticate, filterByOrganization, async (req, res) => {
     try {
-        const { status, category } = req.query;
+        const { status, category, vertical } = req.query;
         // Use req.organizationFilter populated by middleware
         const query = { ...req.organizationFilter };
 
         if (status && status !== 'ALL') query.status = status;
         if (category) query.vehicleCategory = category;
 
-        const drivers = await Driver.find(query).populate('organizationId', 'name displayName code');
-        res.json(drivers);
+        // Vertical filtering
+        if (vertical) {
+            query.vertical = vertical;
+        } else if (req.user.role === 'TAXI_ADMIN') {
+            query.vertical = 'TAXI';
+        } else if (req.user.role === 'LOGISTICS_ADMIN') {
+            query.vertical = 'LOGISTICS';
+        }
+
+        // Search Logic
+        if (req.query.search) {
+            const searchRegex = new RegExp(req.query.search, 'i');
+            query.$or = [
+                { name: searchRegex },
+                { phone: searchRegex },
+                { vehicleNumber: searchRegex }
+            ];
+        }
+
+        // Pagination Logic
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 0;
+        const skip = (page - 1) * limit;
+
+        if (limit > 0) {
+            const [drivers, total] = await Promise.all([
+                Driver.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .populate('organizationId', 'name displayName code'),
+                Driver.countDocuments(query)
+            ]);
+
+            res.json({
+                drivers,
+                total,
+                page,
+                totalPages: Math.ceil(total / limit)
+            });
+        } else {
+            const drivers = await Driver.find(query).populate('organizationId', 'name displayName code');
+            res.json(drivers);
+        }
     } catch (error) {
         res.status(500).json({ error: 'Fetch failed', details: error.message });
     }
@@ -27,7 +70,7 @@ router.post('/', authenticate, async (req, res) => {
     try {
         const driverData = { ...req.body };
 
-        // Determine organization
+        // Determine organization and vertical
         if (req.user.role === 'SUPER_ADMIN') {
             if (!driverData.organizationId) {
                 return res.status(400).json({ error: 'Organization ID is required for Super Admin' });
@@ -35,6 +78,15 @@ router.post('/', authenticate, async (req, res) => {
         } else {
             // Org Admin: Force assign their organization
             driverData.organizationId = req.user.organizationId;
+        }
+
+        // Set Vertical
+        if (req.user.role === 'LOGISTICS_ADMIN') {
+            driverData.vertical = 'LOGISTICS';
+        } else if (req.user.role === 'TAXI_ADMIN') {
+            driverData.vertical = 'TAXI';
+        } else if (!driverData.vertical) {
+            driverData.vertical = 'TAXI'; // Default
         }
 
         // Hash password if provided
@@ -132,10 +184,10 @@ router.get('/:id/history', authenticate, async (req, res) => {
     }
 });
 
-// GET /api/drivers/:id/trips - Get assigned trips for a driver
+// GET /api/drivers/:id/trips - Get trips for a driver (active or history)
 router.get('/:id/trips', authenticate, async (req, res) => {
     try {
-        // Verify driver belongs to allowed organization
+        const isHistory = req.query.history === 'true';
         const driverQuery = { _id: req.params.id };
         if (req.user.role === 'ORG_ADMIN') {
             driverQuery.organizationId = req.user.organizationId;
@@ -143,11 +195,49 @@ router.get('/:id/trips', authenticate, async (req, res) => {
         const driver = await Driver.findOne(driverQuery);
         if (!driver) return res.status(404).json({ error: 'Driver not found or access denied' });
 
+        // If Logistics driver, query Trip collection (standardized)
+        if (driver.vertical === 'LOGISTICS') {
+            const Trip = require('../models/Trip');
+            const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'STARTED', 'PLANNED', 'LOADED', 'IN_TRANSIT'];
+            const historyStatuses = ['COMPLETED', 'DELIVERED', 'SETTLED', 'CANCELLED'];
+
+            const trips = await Trip.find({
+                assignedDriver: req.params.id,
+                status: { $in: isHistory ? historyStatuses : activeStatuses }
+            })
+                .sort({ tripDateTime: isHistory ? -1 : 1 })
+                .populate('consignorId', 'name');
+
+            const normalized = trips.map(t => ({
+                _id: t._id,
+                type: 'LOGISTICS',
+                status: t.status,
+                tripDateTime: t.tripDateTime,
+                pickupLocation: t.loadingLocation || 'Loading Point',
+                dropLocation: t.unloadingLocation || 'Unloading Point',
+                customerName: t.consignorId?.name || 'Consignor',
+                customerPhone: null,
+                vehicleCategory: driver.vehicleCategory || 'LCV',
+                lorryNumber: driver.vehicleNumber,
+                consignmentItem: 'Goods', // Placeholder or add field if available
+                weight: null, // Removed as per request
+                weightUnit: 'Ton',
+                financials: {
+                    price: t.driverTotalPayable || t.totalFreight || 0
+                }
+            }));
+
+            return res.json(normalized);
+        }
+
+        // TAXI driver
         const Trip = require('../models/Trip');
+        const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'STARTED'];
+        const historyStatuses = ['COMPLETED', 'CANCELLED'];
         const trips = await Trip.find({
             assignedDriver: req.params.id,
-            status: { $in: ['ASSIGNED', 'ACCEPTED', 'STARTED'] }
-        }).sort({ tripDateTime: 1 });
+            status: { $in: isHistory ? historyStatuses : activeStatuses }
+        }).sort({ tripDateTime: isHistory ? -1 : 1 });
 
         res.json(trips);
     } catch (error) {
@@ -187,6 +277,47 @@ router.delete('/:id', authenticate, async (req, res) => {
         res.json({ message: 'Driver deleted successfully', driverId: driver._id });
     } catch (error) {
         res.status(500).json({ error: 'Deletion failed', details: error.message });
+    }
+});
+
+// GET /api/drivers/:id - Get single driver details (for profile refresh)
+router.get('/:id', authenticate, async (req, res) => {
+    try {
+        const query = { _id: req.params.id };
+
+        // Security: Drivers can only view themselves
+        if (req.user.role === 'DRIVER' && req.user.driverId !== req.params.id) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+        // Org Admin can only view their own
+        if (req.user.role === 'ORG_ADMIN') {
+            query.organizationId = req.user.organizationId;
+        }
+
+        const driver = await Driver.findOne(query).populate('organizationId', 'displayName name');
+        if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+        // Normalize response
+        const driverData = {
+            _id: driver._id,
+            name: driver.name,
+            phone: driver.phone,
+            vehicleModel: driver.vehicleModel,
+            vehicleNumber: driver.vehicleNumber,
+            vehicleCategory: driver.vehicleCategory,
+            status: driver.status,
+            rating: driver.rating,
+            vertical: driver.vertical,
+            ownerName: driver.ownerName,
+            ownerPhone: driver.ownerPhone,
+            ownerHometown: driver.ownerHometown,
+            organizationId: driver.organizationId?._id || driver.organizationId,
+            organizationName: driver.organizationId?.displayName || driver.organizationId?.name,
+        };
+
+        res.json(driverData);
+    } catch (error) {
+        res.status(500).json({ error: 'Fetch failed', details: error.message });
     }
 });
 
