@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { tripService, consignorService } from '../../services/api';
-import { Truck, FileText } from 'lucide-react';
+import { X, Truck, Banknote, User, FileText, CheckCircle, AlertCircle, MapPin } from 'lucide-react';
+import { tripService, organizationService, consignorService } from '../../services/api';
+import { useSettings } from '../../context/SettingsContext';
 import { generateHireSlip } from '../../utils/generateHireSlip';
+import { generateConsignorSlip } from '../../utils/generateConsignorSlip';
 import { useAuth } from '../../context/AuthContext';
 
 const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
@@ -35,12 +37,14 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
             commission: 0,
             advance: 0,
             loadingCommission: 0,
-            otherExpenses: 0 // New field
+            otherExpenses: 0, // New field
+            paymentAccount: '' // Add payment account field
         },
         billing: {
             ratePerTon: 0,
             grossAmount: 0,
-            loadingMamul: 0
+            loadingMamul: 0,
+            paymentAccount: '' // Add payment account field
         },
         assignedDriverId: null, // Store selected driver ID
         status: 'PENDING', // Default status
@@ -72,6 +76,7 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
                     commission: trip.commissionAmount || 0,
                     advance: trip.driverAdvance || 0,
                     paymentMode: trip.driverAdvancePaymentMode || 'CASH',
+                    paymentAccount: trip.driverPaymentAccount || '',
                     loadingCommission: trip.driverLoadingCommission || 0,
                     otherExpenses: trip.driverOtherExpenses || 0
                 },
@@ -80,7 +85,8 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
                     grossAmount: trip.totalFreight || 0,
                     loadingMamul: trip.loadingMamul || 0,
                     advance: trip.consignorAdvance || 0,
-                    paymentMode: trip.consignorAdvancePaymentMode || 'CASH'
+                    paymentMode: trip.consignorAdvancePaymentMode || 'CASH',
+                    paymentAccount: trip.consignorPaymentAccount || ''
                 },
                 weight: {
                     loaded: trip.actualWeight || 0,
@@ -385,6 +391,12 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
         const totalHire = parseFloat(formData.costing.hireValue) || 0;
         const advance = parseFloat(formData.costing.advance) || 0;
 
+        // Determine Final Status
+        let finalStatus = formData.status || 'PENDING';
+        if (finalStatus === 'PENDING' && (formData.assignedDriverId || formData.lorryNumber || formData.marketVehicle?.lorryName)) {
+            finalStatus = 'ASSIGNED';
+        }
+
         // Transform data to match Backend Trip Model
         const payload = {
             ...formData,
@@ -409,6 +421,7 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
             driverLoadingCommission: loadingCommission, // NEW FIELD
             driverAdvance: formData.costing.advance,
             driverAdvancePaymentMode: formData.costing.paymentMode,
+            driverPaymentAccount: formData.costing.paymentAccount, // NEW
             balancePayableToDriver: totalHire - advance - loadingCommission - (parseFloat(formData.costing.otherExpenses) || 0), // Deduct expenses from balance
             loadingCharge: formData.costing.loadingCharge,
             unloadingCharge: formData.costing.unloadingCharge,
@@ -418,6 +431,7 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
             // 6. Consignor Financials
             consignorAdvance: formData.billing.advance,
             consignorAdvancePaymentMode: formData.billing.paymentMode,
+            consignorPaymentAccount: formData.billing.paymentAccount, // NEW
             balanceReceivable: formData.billing.grossAmount - formData.billing.advance,
             loadingMamul: formData.billing.loadingMamul,
 
@@ -432,7 +446,7 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
 
             // 4. Map Driver
             assignedDriver: formData.assignedDriverId,
-            status: formData.status || ((formData.assignedDriverId || formData.lorryNumber) ? 'ASSIGNED' : 'PENDING'), // Use form status first
+            status: finalStatus,
 
             // 5. Map Financials (Basic mapping, can be expanded)
             totalFreight: formData.billing.grossAmount,
@@ -667,8 +681,21 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
                                 <option value="IMPS">IMPS</option>
                                 <option value="DIESEL">DIESEL</option>
                                 <option value="CREDIT">CREDIT</option>
+                                <option value="BOOK">BOOK</option>
                             </select>
                         </div>
+                        {['NEFT', 'IMPS'].includes(formData.costing.paymentMode) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Payment Account</label>
+                                <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                                    value={formData.costing.paymentAccount} onChange={(e) => handleChange('costing', 'paymentAccount', e.target.value)}>
+                                    <option value="">Select Account</option>
+                                    <option value="0032">0032</option>
+                                    <option value="4650">4650</option>
+                                    <option value="5227">5227</option>
+                                </select>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Balance Payable</label>
                             <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 cursor-not-allowed"
@@ -707,8 +734,21 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
                                 <option value="UPI">UPI</option>
                                 <option value="IMPS">IMPS</option>
                                 <option value="CHEQUE">CHEQUE</option>
+                                <option value="BOOK">BOOK</option>
                             </select>
                         </div>
+                        {['NEFT', 'IMPS'].includes(formData.billing.paymentMode) && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Payment Account</label>
+                                <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                                    value={formData.billing.paymentAccount} onChange={(e) => handleChange('billing', 'paymentAccount', e.target.value)}>
+                                    <option value="">Select Account</option>
+                                    <option value="0032">0032</option>
+                                    <option value="4650">4650</option>
+                                    <option value="5227">5227</option>
+                                </select>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Balance Receivable</label>
                             <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 cursor-not-allowed"
@@ -772,14 +812,24 @@ const LogisticsTripForm = ({ trip, onSave, onCancel }) => {
 
                 <div className="flex justify-end space-x-3 mt-6">
                     {trip && (
-                        <button
-                            type="button"
-                            onClick={() => generateHireSlip(trip, preferences)}
-                            className="mr-auto px-4 py-2 border border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 flex items-center gap-2"
-                        >
-                            <FileText size={16} />
-                            Download Hire Slip
-                        </button>
+                        <div className="mr-auto flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => generateHireSlip(trip, preferences)}
+                                className="px-4 py-2 border border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 flex items-center gap-2"
+                            >
+                                <FileText size={16} />
+                                Download Hire Slip
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => generateConsignorSlip(trip, preferences)}
+                                className="px-4 py-2 border border-teal-600 rounded-md shadow-sm text-sm font-medium text-teal-600 bg-white hover:bg-teal-50 flex items-center gap-2"
+                            >
+                                <FileText size={16} />
+                                Download Consignor Slip
+                            </button>
+                        </div>
                     )}
                     <button
                         type="button"

@@ -127,7 +127,6 @@ router.post('/', authenticate, isSuperAdmin, async (req, res) => {
             address,
             verticals: verticals || ['TAXI'], // Default to TAXI if not provided
             settings: settings || {
-                allowSOS: true,
                 enableReports: true,
                 timezone: 'Asia/Kolkata'
             }
@@ -160,6 +159,12 @@ router.put('/my-preferences', authenticate, async (req, res) => {
                 organization.preferences.theme = {
                     ...organization.preferences.theme,
                     ...req.body.preferences.theme
+                };
+            }
+            if (req.body.preferences.consignorTheme) {
+                organization.preferences.consignorTheme = {
+                    ...organization.preferences.consignorTheme,
+                    ...req.body.preferences.consignorTheme
                 };
             }
             if (req.body.preferences.features) {

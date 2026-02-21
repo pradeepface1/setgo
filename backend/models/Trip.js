@@ -108,18 +108,20 @@ const TripSchema = new mongoose.Schema({
     driverAdvance: Number,      // Paid to driver
     driverAdvancePaymentMode: {
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK'],
         default: 'CASH'
     },
+    driverPaymentAccount: String, // E.g. 0032, 4650, Book
     consignorAdvance: Number,   // Received from consignor
     consignorAdvancePaymentMode: {
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE', 'BOOK'],
         default: 'CASH'
     },
+    consignorPaymentAccount: String, // E.g. 0032, 4650, Book
     paymentMode: { // Deprecated mostly, but keeping for legacy
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK'],
         default: 'CASH'
     },
     // Calculated Balances

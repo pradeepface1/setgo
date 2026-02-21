@@ -157,17 +157,17 @@ const Settings = () => {
                     </div>
                 </div>
 
-                {/* Hire Slip Formatting */}
-                {user?.role === 'ORG_ADMIN' && user?.vertical === 'LOGISTICS' && (
+                {/* Slip Formatting */}
+                {user?.role === 'ORG_ADMIN' && (
                     <div className="p-6">
                         <div className="flex items-center mb-4">
                             <FileText className="h-5 w-5 text-gray-400 mr-2" />
-                            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Hire Slip Formatting (Custom Template)</h2>
+                            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Slip Formatting (Custom Template)</h2>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Customize the exact text that appears on your generated Hire Slips.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Customize the exact text that appears on your generated Slips.</p>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Slip Layout Template</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Global Layout Template</label>
                             <select
                                 value={receiptTemplate}
                                 onChange={(e) => setReceiptTemplate(e.target.value)}
