@@ -272,4 +272,60 @@ router.delete('/:id', authenticate, isSuperAdmin, async (req, res) => {
     }
 });
 
+// Upload logo for an organization
+router.post('/:id/logo', authenticate, async (req, res) => {
+    try {
+        // Authorization: Super Admin, or Org Admin of the specific organization
+        if (req.user.role !== 'SUPER_ADMIN') {
+            if (req.user.role !== 'ORG_ADMIN' || req.user.organizationId.toString() !== req.params.id) {
+                return res.status(403).json({ error: 'Access denied. You can only update your own organization\'s logo.' });
+            }
+        }
+
+        const multer = require('multer');
+        const path = require('path');
+        const fs = require('fs');
+
+        // Ensure upload directory exists
+        const uploadDir = path.join(__dirname, '../uploads/org-logos');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+        const storage = multer.diskStorage({
+            destination: (req, file, cb) => cb(null, uploadDir),
+            filename: (req, file, cb) => {
+                const ext = path.extname(file.originalname) || '.jpg';
+                cb(null, `org-${req.params.id}${ext}`);
+            }
+        });
+
+        const upload = multer({
+            storage,
+            fileFilter: (req, file, cb) => {
+                if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp)$/)) {
+                    return cb(new Error('Only image files (JPEG/PNG) are allowed'));
+                }
+                cb(null, true);
+            },
+            limits: { fileSize: 2 * 1024 * 1024 } // 2 MB
+        }).single('logo');
+
+        upload(req, res, async (err) => {
+            if (err) return res.status(400).json({ error: err.message });
+            if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+            const logoUrl = `/uploads/org-logos/${req.file.filename}`;
+            const organization = await Organization.findByIdAndUpdate(
+                req.params.id,
+                { logo: logoUrl, updatedAt: Date.now() },
+                { new: true }
+            );
+
+            if (!organization) return res.status(404).json({ error: 'Organization not found' });
+            res.json({ logo: logoUrl, organization });
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

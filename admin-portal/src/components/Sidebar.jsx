@@ -4,7 +4,7 @@ import { LayoutDashboard, Car, Users, FileText, Settings, Shield, Building, Truc
 import { useSettings } from '../context/SettingsContext'; // Import settings
 import { useAuth } from '../context/AuthContext'; // Re-added useAuth import
 import ProfileModal from './common/ProfileModal';
-import logoImage from '../assets/logo_new.jpg';
+import Logo from './common/Logo';
 
 import { useTranslation } from 'react-i18next'; // Import i18n hook
 
@@ -17,6 +17,7 @@ const Sidebar = () => {
     const allNavItems = [
         { to: '/', icon: LayoutDashboard, label: t('dashboard'), verticals: ['TAXI', 'LOGISTICS'] },
         { to: '/trips', icon: Car, label: t('trips'), verticals: ['TAXI'] },
+        { to: '/rosters', icon: FileText, label: t('rosters'), verticals: ['TAXI'] },
         { to: '/drivers', icon: Users, label: t('drivers'), verticals: ['TAXI'] },
         { to: '/drivers', icon: Users, label: t('drivers'), verticals: ['LOGISTICS'] }, // TODO: Add specific key for Road Pilots if needed
         { to: '/consignors', icon: Store, label: t('consignors'), verticals: ['LOGISTICS'] },
@@ -42,61 +43,91 @@ const Sidebar = () => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-            <div className="h-auto min-h-[9rem] flex flex-col items-center justify-center border-b border-gray-200 py-4">
-                <img src={logoImage} alt="SetGo" className="h-48 w-auto object-contain mb-0" onError={(e) => e.target.style.display = 'none'} />
+        <aside
+            className="w-64 border-r min-h-screen flex flex-col relative z-20 transition-colors duration-500"
+            style={{
+                backgroundColor: 'var(--theme-bg-sidebar)',
+                borderColor: 'rgba(255,255,255,0.05)'
+            }}
+        >
+            {/* Ambient Background Glow */}
+            <div
+                className="absolute top-0 left-0 w-full h-96 blur-[100px] pointer-events-none opacity-20 transition-all duration-700"
+                style={{ backgroundColor: 'var(--theme-primary)' }}
+            />
+
+            <div className="h-auto min-h-[9rem] flex flex-col items-center justify-center border-b border-white/5 py-10 relative">
+                <Logo className="h-20" />
 
                 {/* Vertical Switcher for Super Admin */}
                 {user?.role === 'SUPER_ADMIN' && (
-                    <div className="flex bg-gray-100 rounded-lg p-1 -mt-2">
+                    <div className="flex bg-black/20 backdrop-blur-md rounded-xl p-1 mt-2 border border-white/5">
                         <button
                             onClick={() => toggleVertical('TAXI')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${currentVertical === 'TAXI' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                            className={`px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all duration-300 ${currentVertical === 'TAXI'
+                                ? 'text-white shadow-[0_0_15px_var(--theme-primary-glow)]'
+                                : 'text-slate-400 hover:text-slate-200'
                                 }`}
+                            style={currentVertical === 'TAXI' ? { backgroundColor: 'var(--theme-primary)' } : {}}
                         >
                             Taxi
                         </button>
                         <button
                             onClick={() => toggleVertical('LOGISTICS')}
-                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${currentVertical === 'LOGISTICS' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                            className={`px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-all duration-300 ${currentVertical === 'LOGISTICS'
+                                ? 'text-white shadow-[0_0_15px_var(--theme-primary-glow)]'
+                                : 'text-slate-400 hover:text-slate-200'
                                 }`}
+                            style={currentVertical === 'LOGISTICS' ? { backgroundColor: 'var(--theme-primary)' } : {}}
                         >
                             Logistics
                         </button>
                     </div>
                 )}
             </div>
-            <nav className="flex-1 p-4 space-y-1">
+
+            <nav className="flex-1 p-4 space-y-2 mt-4 overflow-y-auto">
                 {navItems.map((item) => (
                     <NavLink
                         key={item.to}
                         to={item.to}
                         className={({ isActive }) =>
-                            `flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors ${isActive
-                                ? 'bg-gray-900 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            `flex items-center px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group relative overflow-hidden ${isActive
+                                ? 'text-white shadow-lg'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
                             }`
                         }
+                        style={({ isActive }) => isActive ? {
+                            backgroundColor: 'var(--theme-primary)',
+                            boxShadow: '0 4px 20px -5px var(--theme-primary-glow)'
+                        } : {}}
                     >
-                        <item.icon className="w-5 h-5 mr-3" />
-                        {item.label}
+                        {({ isActive }) => (
+                            <>
+                                {isActive && (
+                                    <div className="absolute left-0 top-0 h-full w-1 bg-white shadow-[0_0_10px_#fff]" />
+                                )}
+                                <item.icon
+                                    className={`w-5 h-5 mr-3 transition-colors ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-theme-primary'}`}
+                                    style={!isActive ? { '--tw-text-opacity': '1', color: 'var(--theme-text-muted)' } : {}}
+                                />
+                                <span className="relative z-10">{item.label}</span>
+                            </>
+                        )}
                     </NavLink>
                 ))}
             </nav>
-            <div className="p-4 border-t border-gray-200">
-            </div>
+
 
             {/* Profile Modal */}
-            {
-                isProfileOpen && (
-                    <ProfileModal
-                        isOpen={isProfileOpen}
-                        onClose={() => setIsProfileOpen(false)}
-                        user={user}
-                    />
-                )
-            }
-        </aside >
+            {isProfileOpen && (
+                <ProfileModal
+                    isOpen={isProfileOpen}
+                    onClose={() => setIsProfileOpen(false)}
+                    user={user}
+                />
+            )}
+        </aside>
     );
 };
 
