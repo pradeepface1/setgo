@@ -118,6 +118,17 @@ const Sidebar = () => {
                 ))}
             </nav>
 
+            {/* Bottom Section: Org Logo */}
+            {user?.organizationLogo && user?.role !== 'SUPER_ADMIN' && (
+                <div className="p-4 border-t border-white/5 flex justify-center mt-auto w-full">
+                    <img
+                        src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${user.organizationLogo}`}
+                        alt="Organization Logo"
+                        className="h-32 w-auto max-w-[90%] object-contain bg-white/5 p-3 rounded-2xl border border-white/10 shadow-lg"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                </div>
+            )}
 
             {/* Profile Modal */}
             {isProfileOpen && (
