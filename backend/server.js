@@ -19,9 +19,13 @@ const io = new Server(server, {
 app.use(cors({
   origin: [
     'https://adminportalstaging.setgo.in',
+    'https://stagingadminportal.setgo.in',
     'https://admin-portal-191882634358.asia-south1.run.app',
+    'https://setgo-487018.web.app',
+    'https://setgo-487018.firebaseapp.com',
     'http://localhost:5173',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://10.0.2.2:5001', // Android Emulator → Mac localhost
   ],
   credentials: true
 }));
@@ -29,7 +33,14 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/jubilant_mvp')
+// Database Connection
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/jubilant_mvp';
+console.log('Attempting to connect to MongoDB...');
+// Mask the URI for logging if it contains credentials
+const maskedURI = mongoURI.replace(/:([^:@]+)@/, ':****@');
+console.log(`MongoDB URI: ${maskedURI}`);
+
+mongoose.connect(mongoURI)
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB Connection Error:', err));
 
@@ -162,12 +173,16 @@ app.use((req, res, next) => {
 app.use('/api/trips', tripRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/sos', require('./routes/sos'));
 app.use('/api/organizations', require('./routes/organizations'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/logistics', require('./routes/logistics')); // NEW
+app.use('/api/consignors', require('./routes/consignors')); // NEW Consignors Route
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/rosters', require('./routes/rosters'));
+app.use('/api/hand-loans', require('./routes/handLoans'));
 
 app.get('/', (req, res) => {
-  res.send('Jubilant Backend API is Running');
+  res.send('SetGo Backend API is Running');
 });
 
 const PORT = process.env.PORT || 5000;

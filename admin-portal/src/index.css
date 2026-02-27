@@ -1,7 +1,196 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white;
+  :root {
+    --jubilant-50: #f5f7ff;
+    --jubilant-100: #ebf0fe;
+    --jubilant-200: #dbe4fe;
+    --jubilant-300: #bfccfd;
+    --jubilant-400: #99aafa;
+    --jubilant-500: #667eea;
+    --jubilant-600: #4f46e5;
+    --jubilant-700: #4338ca;
+    --jubilant-800: #3730a3;
+    --jubilant-900: #312e81;
+    --jubilant-950: #1e1b4b;
+
+    /* Theme Variables - Default (Midnight Neon) */
+    --theme-primary: #4f46e5;
+    --theme-primary-hover: #4338ca;
+    --theme-primary-glow: rgba(79, 70, 229, 0.4);
+    --theme-bg-base: #020617;
+    --theme-bg-sidebar: #0f172a;
+    --theme-bg-card: #1e293b;
+    --theme-text-main: #ffffff;
+    --theme-text-muted: #94a3b8;
+    --theme-accent: #10b981;
   }
+
+  [data-theme='arctic-frost'] {
+    --theme-primary: #0ea5e9;
+    --theme-primary-hover: #0284c7;
+    --theme-primary-glow: rgba(14, 165, 233, 0.3);
+    --theme-bg-base: #f8fafc;
+    --theme-bg-sidebar: #ffffff;
+    --theme-bg-card: #ffffff;
+    --theme-text-main: #0f172a;
+    --theme-text-muted: #64748b;
+    --theme-accent: #3b82f6;
+  }
+
+  [data-theme='cyber-industrial'] {
+    --theme-primary: #f59e0b;
+    --theme-primary-hover: #d97706;
+    --theme-primary-glow: rgba(245, 158, 11, 0.4);
+    --theme-bg-base: #0a0a0a;
+    --theme-bg-sidebar: #171717;
+    --theme-bg-card: #262626;
+    --theme-text-main: #fafafa;
+    --theme-text-muted: #a3a3a3;
+    --theme-accent: #ef4444;
+  }
+
+  [data-theme='deep-forest'] {
+    --theme-primary: #10b981;
+    --theme-primary-hover: #059669;
+    --theme-primary-glow: rgba(16, 185, 129, 0.4);
+    --theme-bg-base: #064e3b;
+    --theme-bg-sidebar: #065f46;
+    --theme-bg-card: #064e3b;
+    --theme-text-main: #ecfdf5;
+    --theme-text-muted: #a7f3d0;
+    --theme-accent: #34d399;
+  }
+
+  [data-theme='royal-velvet'] {
+    --theme-primary: #7c3aed;
+    --theme-primary-hover: #6d28d9;
+    --theme-primary-glow: rgba(124, 58, 237, 0.4);
+    --theme-bg-base: #1e1b4b;
+    --theme-bg-sidebar: #312e81;
+    --theme-bg-card: #3730a3;
+    --theme-text-main: #f5f3ff;
+    --theme-text-muted: #c4b5fd;
+    --theme-accent: #fbbf24;
+  }
+
+  body {
+    background-color: var(--theme-bg-base);
+    color: var(--theme-text-main);
+    @apply font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background-color: var(--theme-bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .glass-dark {
+    background-color: var(--theme-bg-sidebar);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .theme-modal {
+    background-color: var(--theme-bg-sidebar) !important;
+    color: var(--theme-text-main) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .theme-modal input,
+  .theme-modal select {
+    background-color: var(--theme-bg-card) !important;
+    color: var(--theme-text-main) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .theme-modal label {
+    color: var(--theme-text-muted) !important;
+  }
+
+  .theme-modal h3,
+  .theme-modal h4 {
+    color: var(--theme-text-main) !important;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px var(--theme-primary-glow);
+  }
+
+  .bg-theme-primary {
+    background-color: var(--theme-primary);
+  }
+
+  .text-theme-primary {
+    color: var(--theme-primary);
+  }
+
+  .border-theme-primary {
+    border-color: var(--theme-primary);
+  }
+
+  .bg-vibrant-gradient {
+    background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+
+  40%,
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes flare {
+  0% {
+    transform: translateX(-150%);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  30% {
+    transform: translateX(450%);
+    opacity: 1;
+  }
+
+  40%,
+  100% {
+    transform: translateX(450%);
+    opacity: 0;
+  }
+}
+
+.animate-flare {
+  animation: flare 5s ease-in-out infinite;
 }

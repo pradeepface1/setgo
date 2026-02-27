@@ -97,6 +97,28 @@ export const consignorSlipLayout = (tripOrTrips, preferences = null) => {
         doc.text(consignorPhone, margin + 25, currentY);
         currentY += 6;
 
+        const lorryNo = trip.vehicleNumber || trip.assignedDriver?.vehicleNumber || '----------';
+        const driverName = trip.driverName || trip.assignedDriver?.name || '----------';
+        const driverPhone = trip.driverPhone || trip.assignedDriver?.phone || '----------';
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`Lorry No      :`, margin, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(lorryNo, margin + 25, currentY);
+        currentY += 6;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`Driver Name   :`, margin, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(driverName, margin + 25, currentY);
+        currentY += 6;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`Driver Mobile :`, margin, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(driverPhone, margin + 25, currentY);
+        currentY += 6;
+
         const fromLoc = String(trip.loadingLocation || '----------');
         const toLoc = String(trip.unloadingLocation || '----------');
         let loadingDate = '----------';
@@ -136,22 +158,58 @@ export const consignorSlipLayout = (tripOrTrips, preferences = null) => {
         const valAlign = rightColAlign + 2;
 
         doc.setFont("helvetica", "normal");
-        const expectedWeight = trip.expectedWeight || trip.actualWeight || 0;
+        const expectedWeight = trip.expectedWeight || trip.actualWeight || trip.billedWeight || 0;
         const rate = trip.ratePerTon || 0;
-        const totalFreight = expectedWeight * rate;
+        const totalFreight = trip.totalFreight || (expectedWeight * rate);
 
         const advance = trip.consignorAdvance || 0;
-        const balance = Math.max(0, totalFreight - advance);
+        const roundOff = trip.roundOff || 0;
+        const tds = trip.tds || 0;
+        const loadingMamul = trip.loadingMamul || 0;
+        const unloadingMamul = trip.consignorUnloadingMamul || 0;
+        const paymentMamul = trip.consignorPaymentMamul || 0;
+
+        const balance = totalFreight - advance + roundOff - tds - loadingMamul - unloadingMamul - paymentMamul;
 
         const calculationText = (expectedWeight > 0 && rate > 0) ? ` (${expectedWeight} * ${rate})` : '';
 
-        doc.text(`Total Freight${calculationText}`, margin, currentY);
+        doc.text(`Gross Amount${calculationText}`, margin, currentY);
         doc.text(`: Rs ${totalFreight.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
         currentY += 6;
 
         doc.text("Advance Received", margin, currentY);
         doc.text(`: Rs ${advance.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
         currentY += 6;
+
+        if (loadingMamul > 0) {
+            doc.text("Loading Mamul", margin, currentY);
+            doc.text(`: -Rs ${loadingMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+
+        if (unloadingMamul > 0) {
+            doc.text("Unloading Mamul", margin, currentY);
+            doc.text(`: -Rs ${unloadingMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+
+        if (paymentMamul > 0) {
+            doc.text("Payment Mamul", margin, currentY);
+            doc.text(`: -Rs ${paymentMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+
+        if (tds > 0) {
+            doc.text("TDS Deduction", margin, currentY);
+            doc.text(`: -Rs ${tds.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+
+        if (roundOff !== 0) {
+            doc.text("Round Off", margin, currentY);
+            doc.text(`: ${roundOff > 0 ? '+' : ''}Rs ${roundOff.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
 
         drawLine(); // ---
 

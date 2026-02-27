@@ -72,20 +72,30 @@ const Reports = () => {
         <div className="space-y-8">
             {/* ... (lines 59-179) ... */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h1>
+                <h1 className="text-2xl font-black tracking-tight transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>Reports & Analytics</h1>
             </div>
 
             {/* Consolidated Report Section */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Consolidated Operational Report</h2>
+            <div
+                className="shadow-sm p-6 rounded-2xl border transition-colors duration-500"
+                style={{
+                    backgroundColor: 'var(--theme-bg-card)',
+                    borderColor: 'rgba(255,255,255,0.05)'
+                }}
+            >
+                <h2 className="text-sm font-black uppercase tracking-widest opacity-50 mb-6 transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>Consolidated Operational Report</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {reportMetrics.map((metric, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-gray-100 transition-colors">
-                            <div className={`p-2 rounded-full ${metric.color} bg-opacity-10 mb-2`}>
+                        <div
+                            key={index}
+                            className="rounded-xl p-4 flex flex-col items-center text-center transition-all duration-300 hover:scale-[1.02]"
+                            style={{ backgroundColor: 'var(--theme-bg-sidebar)' }}
+                        >
+                            <div className={`p-2 rounded-full ${metric.color} bg-opacity-10 mb-3`}>
                                 <metric.icon className={`h-5 w-5 ${metric.color.replace('bg-', 'text-')}`} />
                             </div>
-                            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">{metric.label}</dt>
-                            <dd className="mt-1 text-lg font-bold text-gray-900">{metric.value}</dd>
+                            <dt className="text-[10px] font-bold uppercase tracking-widest opacity-50 transition-colors duration-500" style={{ color: 'var(--theme-text-muted)' }}>{metric.label}</dt>
+                            <dd className="mt-1 text-xl font-black transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>{metric.value}</dd>
                         </div>
                     ))}
                 </div>
@@ -93,127 +103,49 @@ const Reports = () => {
 
             {/* Status Summary Cards */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-                <button
-                    onClick={() => setSelectedStatus('PENDING')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'PENDING' ? 'ring-2 ring-yellow-500' : ''}`}
-                >
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-yellow-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                {[
+                    { status: 'PENDING', label: 'Pending', value: stats.pending, color: '#F59E0B', ring: 'ring-amber-500', svgPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+                    { status: 'ASSIGNED', label: 'Assigned', value: stats.assigned, color: '#6B7280', ring: 'ring-gray-500', svgPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+                    { status: 'STARTED', label: 'Started', value: stats.started || 0, color: '#F97316', ring: 'ring-orange-500', svgPath: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                    { status: 'COMPLETED', label: 'Completed', value: stats.completed, color: '#10B981', ring: 'ring-green-500', svgPath: 'M5 13l4 4L19 7' },
+                    { status: 'CANCELLED', label: 'Cancelled', value: stats.cancelled, color: '#EF4444', ring: 'ring-red-500', svgPath: 'M6 18L18 6M6 6l12 12' },
+                ].map(({ status, label, value, color, ring, svgPath }) => (
+                    <button
+                        key={status}
+                        onClick={() => setSelectedStatus(status)}
+                        className={`overflow-hidden rounded-2xl border transition-all duration-300 text-left hover:scale-[1.02] ${selectedStatus === status ? `ring-2 ${ring}` : ''}`}
+                        style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}
+                    >
+                        <div className="p-5">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <div className="rounded-xl p-3" style={{ backgroundColor: `${color}20` }}>
+                                        <svg className="h-6 w-6" style={{ color }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={svgPath} />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="ml-4">
+                                    <dt className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: 'var(--theme-text-muted)' }}>{label}</dt>
+                                    <dd className="text-3xl font-black mt-0.5 tracking-tighter" style={{ color: 'var(--theme-text-main)' }}>{value}</dd>
                                 </div>
                             </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Pending</dt>
-                                    <dd className="text-3xl font-semibold text-gray-900">{stats.pending}</dd>
-                                </dl>
-                            </div>
                         </div>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setSelectedStatus('ASSIGNED')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'ASSIGNED' ? 'ring-2 ring-gray-500' : ''}`}
-                >
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-gray-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Assigned</dt>
-                                    <dd className="text-3xl font-semibold text-gray-900">{stats.assigned}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setSelectedStatus('STARTED')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'STARTED' ? 'ring-2 ring-orange-500' : ''}`}
-                >
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-orange-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Started</dt>
-                                    <dd className="text-3xl font-semibold text-gray-900">{stats.started || 0}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setSelectedStatus('COMPLETED')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'COMPLETED' ? 'ring-2 ring-green-500' : ''}`}
-                >
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-green-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Completed</dt>
-                                    <dd className="text-3xl font-semibold text-gray-900">{stats.completed}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </button>
-
-                <button
-                    onClick={() => setSelectedStatus('CANCELLED')}
-                    className={`bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow text-left ${selectedStatus === 'CANCELLED' ? 'ring-2 ring-red-500' : ''}`}
-                >
-                    <div className="p-5">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <div className="rounded-md bg-red-500 p-3">
-                                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt className="text-sm font-medium text-gray-500 truncate">Cancelled</dt>
-                                    <dd className="text-3xl font-semibold text-gray-900">{stats.cancelled}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </button>
+                    </button>
+                ))}
             </div>
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 gap-6">
                 {/* Trip Status Chart */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Trip Status Distribution</h3>
+                <div
+                    className="shadow-sm rounded-2xl p-6 border transition-colors duration-500"
+                    style={{
+                        backgroundColor: 'var(--theme-bg-sidebar)',
+                        borderColor: 'rgba(255,255,255,0.05)'
+                    }}
+                >
+                    <h3 className="text-sm font-black uppercase tracking-widest opacity-50 mb-6 transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>Trip Status Distribution</h3>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Pie
@@ -255,19 +187,21 @@ const Reports = () => {
             {/* Filtered Trip List */}
             {selectedStatus && (
                 <div className="mt-6">
-                    <div className="bg-white shadow rounded-lg p-4 mb-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900">
-                                {selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()} Trips
-                            </h2>
-                            <button
-                                onClick={() => setSelectedStatus(null)}
-                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium"
-                            >
-                                <X className="h-5 w-5" />
-                                Close
-                            </button>
-                        </div>
+                    <div
+                        className="rounded-2xl border p-4 mb-4 flex items-center justify-between"
+                        style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}
+                    >
+                        <h2 className="text-sm font-black uppercase tracking-widest opacity-50" style={{ color: 'var(--theme-text-main)' }}>
+                            {selectedStatus.charAt(0) + selectedStatus.slice(1).toLowerCase()} Trips
+                        </h2>
+                        <button
+                            onClick={() => setSelectedStatus(null)}
+                            className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity"
+                            style={{ color: 'var(--theme-text-main)' }}
+                        >
+                            <X className="h-4 w-4" />
+                            Close
+                        </button>
                     </div>
                     <TripList
                         statusFilter={selectedStatus}

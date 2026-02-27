@@ -172,26 +172,38 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
     if (error) return <div className="text-red-500 p-4">{error}</div>;
 
     return (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="shadow-lg rounded-2xl overflow-hidden border transition-colors duration-500" style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}>
             {/* Header Section */}
-            <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h3 className="text-lg font-medium leading-6 text-gray-900">{title}</h3>
+            <div className="px-6 py-4 border-b flex flex-col sm:flex-row justify-between items-center gap-4" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                <h3 className="text-lg font-bold tracking-tight" style={{ color: 'var(--theme-text-main)' }}>{title}</h3>
 
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">From:</span>
+                        <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>From:</span>
                         <input
                             type="date"
-                            className="text-sm border-gray-300 rounded-md shadow-sm focus:border-jubilant-500 focus:ring-jubilant-500"
+                            className="text-[10px] font-bold uppercase tracking-widest rounded-lg border px-3 py-2 transition-all duration-300 focus:outline-none focus:ring-1"
+                            style={{
+                                backgroundColor: 'var(--theme-bg-sidebar)',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                color: '#ffffff',
+                                colorScheme: 'dark'
+                            }}
                             value={dateFilter.start}
                             onChange={(e) => setDateFilter(prev => ({ ...prev, start: e.target.value }))}
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">To:</span>
+                        <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>To:</span>
                         <input
                             type="date"
-                            className="text-sm border-gray-300 rounded-md shadow-sm focus:border-jubilant-500 focus:ring-jubilant-500"
+                            className="text-[10px] font-bold uppercase tracking-widest rounded-lg border px-3 py-2 transition-all duration-300 focus:outline-none focus:ring-1"
+                            style={{
+                                backgroundColor: 'var(--theme-bg-sidebar)',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                color: '#ffffff',
+                                colorScheme: 'dark'
+                            }}
                             value={dateFilter.end}
                             onChange={(e) => setDateFilter(prev => ({ ...prev, end: e.target.value }))}
                         />
@@ -206,29 +218,29 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                 </div>
             </div>
 
-            <ul className="divide-y divide-gray-800">
+            <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                 {trips.length === 0 ? (
-                    <li className="px-6 py-4 text-center text-gray-500">No trips found</li>
+                    <li className="px-6 py-8 text-center" style={{ color: 'var(--theme-text-muted)' }}>No trips found</li>
                 ) : (
                     trips.map((trip) => (
-                        <li key={trip._id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                        <li key={trip._id} className="px-6 py-5 hover:bg-opacity-50 transition-colors" style={{ backgroundColor: 'transparent' }}>
                             <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-4">
-                                            <p className="text-sm font-medium text-jubilant-600 truncate">{trip.customerName}</p>
+                                            <p className="text-sm font-bold" style={{ color: 'var(--theme-primary)' }}>{trip.customerName}</p>
                                             {trip.customerPhone && (
-                                                <div className="flex items-center text-xs text-gray-600">
-                                                    <svg className="h-3 w-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <div className="flex items-center text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                                                    <svg className="h-3 w-3 mr-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                                     </svg>
                                                     <span>{trip.customerPhone}</span>
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex items-center text-sm text-gray-500">
-                                            <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                                            <p>{new Date(trip.tripDateTime).toLocaleString()}</p>
+                                        <div className="flex items-center text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+                                            <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 opacity-50" />
+                                            <p className="font-medium">{new Date(trip.tripDateTime).toLocaleString()}</p>
                                             <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${trip.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                                                 trip.status === 'ASSIGNED' ? 'bg-gray-100 text-gray-800' :
                                                     trip.status === 'STARTED' ? 'bg-orange-100 text-orange-800' :
@@ -240,10 +252,10 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                                        <MapPin className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                                        <p className="truncate">
-                                            <span className="font-medium text-gray-900">From:</span> {trip.pickupLocation}
+                                    <div className="mt-2 flex items-center text-sm">
+                                        <MapPin className="flex-shrink-0 mr-1.5 h-4 w-4 opacity-50" style={{ color: 'var(--theme-text-muted)' }} />
+                                        <p className="truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                                            <span className="font-bold uppercase text-[10px] tracking-wider mr-1" style={{ color: 'var(--theme-text-main)' }}>From:</span> {trip.pickupLocation}
                                             {trip.pickupType && trip.pickupType !== 'OTHERS' && (
                                                 <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
                                                     {trip.pickupType.replace('_', ' ')}
@@ -262,47 +274,61 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                                                 href={trip.googleLocation}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="mt-1 flex items-center text-xs text-blue-600 hover:text-blue-800 pl-6"
+                                                className="mt-1 flex items-center text-xs pl-6 transition-opacity hover:opacity-70"
+                                                style={{ color: 'var(--theme-primary)' }}
                                             >
                                                 <MapPin className="h-3 w-3 mr-1" />
                                                 View on Google Maps
                                             </a>
                                         )}
-                                        <p className="truncate mt-1">
-                                            <span className="font-medium text-gray-900">To:</span> {trip.dropLocation}
+                                        <p className="truncate mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+                                            <span className="font-bold uppercase text-[10px] tracking-wider mr-1" style={{ color: 'var(--theme-text-main)' }}>To:</span> {trip.dropLocation}
                                         </p>
                                     </div>
-                                    <div className="mt-2 text-sm text-gray-500 flex justify-between">
+                                    <div className="mt-3 text-sm flex justify-between items-center">
                                         <div>
-                                            Vehicle: <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{trip.vehicleCategory || trip.vehiclePreference}</span>
-                                            {trip.vehicleSubcategory && <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">{trip.vehicleSubcategory}</span>}
+                                            <span className="text-xs uppercase font-bold tracking-tight mr-2" style={{ color: 'var(--theme-text-muted)' }}>Vehicle:</span>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-opacity-10" style={{ backgroundColor: 'var(--theme-primary)', color: 'var(--theme-primary)' }}>{trip.vehicleCategory || trip.vehiclePreference}</span>
+                                            {trip.vehicleSubcategory && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-bold bg-white/5" style={{ color: 'var(--theme-text-main)' }}>{trip.vehicleSubcategory}</span>}
                                         </div>
                                         {trip.status === 'COMPLETED' && (trip.totalKm || trip.totalHours) && (
-                                            <div className="mt-1 text-xs text-gray-500">
-                                                <span className="font-medium text-gray-700">Billing:</span> {trip.totalKm} km • {trip.totalHours} hrs
+                                            <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                                                <span className="font-bold" style={{ color: 'var(--theme-text-main)' }}>Billing:</span> {trip.totalKm} km • {trip.totalHours} hrs
                                                 {(trip.tollParking > 0 || trip.permit > 0) && ` • Toll/Permit: ₹${(trip.tollParking || 0) + (trip.permit || 0)}`}
                                             </div>
                                         )}
                                     </div>
                                     {trip.assignedDriver && (
-                                        <div className="mt-2 pt-2 border-t border-gray-100">
-                                            <div className="text-xs font-semibold text-gray-700 mb-1">Assigned Driver:</div>
-                                            <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                                        <div className="mt-3 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                            <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--theme-text-muted)' }}>Assigned Driver</div>
+                                            <div className="grid grid-cols-3 gap-2 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                                                 <div className="flex items-center">
-                                                    <User className="h-3 w-3 mr-1 text-gray-400" />
-                                                    <span className="font-medium">{trip.assignedDriver.name}</span>
+                                                    <User className="h-3 w-3 mr-1 opacity-50" />
+                                                    <span className="font-medium" style={{ color: 'var(--theme-text-main)' }}>{trip.assignedDriver.name}</span>
                                                 </div>
                                                 <div className="flex items-center">
-                                                    <svg className="h-3 w-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg className="h-3 w-3 mr-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                                     </svg>
                                                     <span>{trip.assignedDriver.phone}</span>
+                                                    <a
+                                                        href={`https://wa.me/91${trip.assignedDriver.phone.replace(/\\D/g, '').slice(-10)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="ml-2 text-green-500 hover:text-green-600 transition-colors"
+                                                        title="Message Driver on WhatsApp"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.878-.788-1.472-1.761-1.645-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                                        </svg>
+                                                    </a>
                                                 </div>
                                                 <div className="flex items-center">
-                                                    <svg className="h-3 w-3 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg className="h-3 w-3 mr-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                     </svg>
-                                                    <span>{trip.assignedDriver.vehicleNumber}</span>
+                                                    <span className="font-medium" style={{ color: 'var(--theme-text-main)' }}>{trip.assignedDriver.vehicleNumber}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -371,40 +397,46 @@ const TripList = ({ onTripUpdated, statusFilter, title = "Active Trips", refresh
                     ))
                 )}
             </ul>
-            {selectedTrip && (
-                <AssignmentModal
-                    trip={selectedTrip}
-                    onClose={() => setSelectedTrip(null)}
-                    onAssignSuccess={() => {
-                        fetchTrips();
-                        setSelectedTrip(null);
-                        if (onTripUpdated) onTripUpdated();
-                    }}
-                />
-            )}
-            {activeCompletionTrip && (
-                <TripCompletionModal
-                    trip={activeCompletionTrip}
-                    onClose={() => setActiveCompletionTrip(null)}
-                    onComplete={() => {
-                        fetchTrips();
-                        setActiveCompletionTrip(null);
-                        if (onTripUpdated) onTripUpdated();
-                    }}
-                />
-            )}
-            {editTrip && (
-                <EditTripModal
-                    trip={editTrip}
-                    onClose={() => setEditTrip(null)}
-                    onTripUpdated={() => {
-                        fetchTrips();
-                        setEditTrip(null);
-                        if (onTripUpdated) onTripUpdated();
-                    }}
-                />
-            )}
-        </div>
+            {
+                selectedTrip && (
+                    <AssignmentModal
+                        trip={selectedTrip}
+                        onClose={() => setSelectedTrip(null)}
+                        onAssignSuccess={() => {
+                            fetchTrips();
+                            setSelectedTrip(null);
+                            if (onTripUpdated) onTripUpdated();
+                        }}
+                    />
+                )
+            }
+            {
+                activeCompletionTrip && (
+                    <TripCompletionModal
+                        trip={activeCompletionTrip}
+                        onClose={() => setActiveCompletionTrip(null)}
+                        onComplete={() => {
+                            fetchTrips();
+                            setActiveCompletionTrip(null);
+                            if (onTripUpdated) onTripUpdated();
+                        }}
+                    />
+                )
+            }
+            {
+                editTrip && (
+                    <EditTripModal
+                        trip={editTrip}
+                        onClose={() => setEditTrip(null)}
+                        onTripUpdated={() => {
+                            fetchTrips();
+                            setEditTrip(null);
+                            if (onTripUpdated) onTripUpdated();
+                        }}
+                    />
+                )
+            }
+        </div >
     );
 };
 

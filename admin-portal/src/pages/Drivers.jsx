@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { tripService } from '../services/api';
 import { useSocket } from '../context/SocketContext';
-import { Search, User, Phone, Download, Plus, Trash2, Lock, RefreshCw, AlertCircle, Car, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, User, Phone, Download, Plus, Trash2, Lock, RefreshCw, AlertCircle, Car, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import AddDriverModal from '../components/drivers/AddDriverModal';
 import EditDriverModal from '../components/drivers/EditDriverModal';
 import ResetPasswordModal from '../components/drivers/ResetPasswordModal';
+import BulkUploadModal from '../components/common/BulkUploadModal';
 import { useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 
@@ -23,6 +24,7 @@ const Drivers = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     const [showAddModal, setShowAddModal] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [editDriver, setEditDriver] = useState(null);
     const [passwordModalDriver, setPasswordModalDriver] = useState(null);
     const [error, setError] = useState(null);
@@ -159,11 +161,11 @@ const Drivers = () => {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-baseline gap-2">
-                    <h1 className="text-2xl font-semibold text-gray-900">
+                    <h1 className="text-2xl font-semibold transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>
                         {currentVertical === 'LOGISTICS' ? 'Road Pilots' : 'Drivers'}
                     </h1>
-                    <span className="text-sm text-gray-500">
-                        Total: <span className="font-medium text-gray-900">{total}</span>
+                    <span className="text-sm transition-colors duration-500" style={{ color: 'var(--theme-text-muted)' }}>
+                        Total: <span className="font-medium" style={{ color: 'var(--theme-text-main)' }}>{total}</span>
                     </span>
                     <button
                         onClick={() => fetchDrivers()}
@@ -174,13 +176,14 @@ const Drivers = () => {
                     </button>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <div className="relative rounded-md shadow-sm w-full sm:w-64">
+                    <div className="relative rounded-xl overflow-hidden w-full sm:w-64">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                            <Search className="h-4 w-4 opacity-50" style={{ color: 'var(--theme-text-main)' }} />
                         </div>
                         <input
                             type="text"
-                            className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2"
+                            className="block w-full pl-10 text-xs font-bold transition-all focus:outline-none py-2.5"
+                            style={{ backgroundColor: 'var(--theme-bg-sidebar)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)' }}
                             placeholder="Search name, phone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -194,17 +197,25 @@ const Drivers = () => {
                             <Download className="h-4 w-4 mr-2" />
                             Export
                         </button>
-                        {/* Import Button Removed for now to simplify, or keep if needed? Keeping for now but simplifying logic if complex */}
+                        <button
+                            onClick={() => setIsBulkModalOpen(true)}
+                            className="inline-flex items-center px-4 py-2 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all hover:bg-white/5"
+                            style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)', backgroundColor: 'transparent' }}
+                        >
+                            <Upload className="h-4 w-4 mr-2" />
+                            Import CSV
+                        </button>
 
                         <button
                             onClick={() => setShowAddModal(true)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                            className="inline-flex items-center px-4 py-2 border border-transparent text-xs font-bold uppercase tracking-widest rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20"
                         >
                             <Plus className="h-4 w-4 mr-2" />
                             {currentVertical === 'LOGISTICS' ? 'Add Road Pilot' : 'Add Driver'}
                         </button>
                         <select
-                            className="border border-gray-300 rounded-md shadow-sm p-2 text-sm"
+                            className="border rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all focus:outline-none"
+                            style={{ backgroundColor: 'var(--theme-bg-sidebar)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)' }}
                             value={filter}
                             onChange={(e) => handleFilterChange(e.target.value)}
                         >
@@ -230,26 +241,44 @@ const Drivers = () => {
                 </div>
             )}
 
-            <div className="bg-white shadow overflow-hidden rounded-md border border-gray-200">
-                <ul className="divide-y divide-gray-200">
+            <div
+                className="shadow overflow-hidden rounded-xl border transition-colors duration-500"
+                style={{
+                    backgroundColor: 'var(--theme-bg-card)',
+                    borderColor: 'rgba(255,255,255,0.05)'
+                }}
+            >
+                <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                     {loading ? (
-                        <li className="p-6 text-center text-gray-500">Loading drivers...</li>
+                        <li className="p-6 text-center" style={{ color: 'var(--theme-text-muted)' }}>Loading drivers...</li>
                     ) : drivers.length === 0 ? (
-                        <li className="p-6 text-center text-gray-500">No drivers found matching your search.</li>
+                        <li className="p-6 text-center" style={{ color: 'var(--theme-text-muted)' }}>No drivers found matching your search.</li>
                     ) : (
                         drivers.map((driver) => (
-                            <li key={driver._id} className="block hover:bg-gray-50">
+                            <li key={driver._id} className="block transition-colors" style={{ '--tw-hover-bg': 'rgba(255,255,255,0.04)' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                                 <div className="px-4 py-4 sm:px-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                            <div className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--theme-text-muted)' }}>
                                                 <User className="h-6 w-6" />
                                             </div>
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-jubilant-600 truncate">{driver.name}</div>
-                                                <div className="flex items-center text-sm text-gray-500">
-                                                    <Phone className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                                                    {driver.phone}
+                                                <div className="text-sm font-black tracking-tight" style={{ color: 'var(--theme-text-main)', fontFamily: 'Inter, sans-serif' }}>{driver.name}</div>
+                                                <div className="flex items-center text-xs opacity-60 mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+                                                    <Phone className="flex-shrink-0 mr-1.5 h-3 w-3" />
+                                                    <span className="font-bold">{driver.phone}</span>
+                                                    <a
+                                                        href={`https://wa.me/91${driver.phone.replace(/\\D/g, '').slice(-10)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="ml-2 text-green-500 hover:text-green-600 transition-colors"
+                                                        title="Message Driver on WhatsApp"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.878-.788-1.472-1.761-1.645-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                                        </svg>
+                                                    </a>
                                                 </div>
                                                 {driver.organizationId && (
                                                     <div className="mt-1 text-xs text-gray-500 bg-gray-100 inline-block px-2 py-0.5 rounded">
@@ -327,7 +356,13 @@ const Drivers = () => {
 
             {/* Pagination Controls */}
             {total > 0 && (
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg shadow-sm">
+                <div
+                    className="flex items-center justify-between border-t px-4 py-3 sm:px-6 rounded-xl shadow-sm mt-4 transition-colors duration-500"
+                    style={{
+                        backgroundColor: 'var(--theme-bg-card)',
+                        borderColor: 'rgba(255,255,255,0.05)'
+                    }}
+                >
                     <div className="flex flex-1 justify-between sm:hidden">
                         <button
                             onClick={() => handlePageChange(page - 1)}
@@ -346,30 +381,32 @@ const Drivers = () => {
                     </div>
                     <div className="hidden sm:flex flex-1 items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-700">
-                                Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to <span className="font-medium">{Math.min(page * limit, total)}</span> of <span className="font-medium">{total}</span> results
+                            <p className="text-xs uppercase tracking-widest font-bold opacity-50" style={{ color: 'var(--theme-text-muted)' }}>
+                                Showing <span style={{ color: 'var(--theme-text-main)' }}>{(page - 1) * limit + 1}</span> to <span style={{ color: 'var(--theme-text-main)' }}>{Math.min(page * limit, total)}</span> of <span style={{ color: 'var(--theme-text-main)' }}>{total}</span> results
                             </p>
                         </div>
                         <div>
-                            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                            <nav className="isolate inline-flex -space-x-px rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(255,255,255,0.1)' }} aria-label="Pagination">
                                 <button
                                     onClick={() => handlePageChange(page - 1)}
                                     disabled={page === 1}
-                                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="relative inline-flex items-center px-3 py-2 text-sm transition-all hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--theme-text-main)' }}
                                 >
                                     <span className="sr-only">Previous</span>
-                                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                                 </button>
-                                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                                <span className="relative inline-flex items-center px-4 py-2 text-[10px] font-black uppercase tracking-widest border-x" style={{ color: 'var(--theme-text-main)', borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
                                     Page {page} of {totalPages}
                                 </span>
                                 <button
                                     onClick={() => handlePageChange(page + 1)}
                                     disabled={page === totalPages}
-                                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="relative inline-flex items-center px-3 py-2 text-sm transition-all hover:bg-white/5 disabled:opacity-20 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--theme-text-main)' }}
                                 >
                                     <span className="sr-only">Next</span>
-                                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                                 </button>
                             </nav>
                         </div>
@@ -402,6 +439,55 @@ const Drivers = () => {
                         setEditDriver(null);
                     }}
                     vertical={currentVertical}
+                />
+            )}
+
+            {isBulkModalOpen && (
+                <BulkUploadModal
+                    onClose={() => setIsBulkModalOpen(false)}
+                    onUploadSuccess={fetchDrivers}
+                    title={currentVertical === 'LOGISTICS' ? "Bulk Import Road Pilots" : "Bulk Import Drivers"}
+                    expectedColumns={
+                        currentVertical === 'LOGISTICS'
+                            ? [
+                                'DriverName (Compulsory)', 'MobileNumber (Compulsory)', 'Password (Compulsory)', 'VehicleNumber (Compulsory)',
+                                'VehicleCategory (Compulsory)', 'VehicleModel (Compulsory)', 'Status (Compulsory)',
+                                'LorryName', 'OwnerName', 'OwnerPhone', 'OwnerHometown', 'PANNumber', 'PANCardName',
+                                'Bank_AccountName', 'Bank_BankName', 'Bank_AccountNumber', 'Bank_IFSC', 'Bank_UPINumber',
+                                'SecondaryBank_AccountName', 'SecondaryBank_BankName', 'SecondaryBank_AccountNumber', 'SecondaryBank_IFSC', 'SecondaryBank_UPINumber'
+                            ]
+                            : ['DriverName (Compulsory)', 'MobileNumber (Compulsory)', 'Password (Compulsory)', 'VehicleNumber (Compulsory)', 'VehicleCategory (Compulsory)', 'VehicleModel (Compulsory)', 'Status (Compulsory)']
+                    }
+                    sampleData={
+                        currentVertical === 'LOGISTICS'
+                            ? [{
+                                'DriverName (Compulsory)': 'Raju Bhai',
+                                'MobileNumber (Compulsory)': '9999999991',
+                                'Password (Compulsory)': 'pass123',
+                                'VehicleNumber (Compulsory)': 'KA01AB1234',
+                                'VehicleCategory (Compulsory)': '10 wheeler',
+                                'VehicleModel (Compulsory)': 'Tata LPT',
+                                'Status (Compulsory)': 'OFFLINE',
+                                'LorryName': 'Sri Sai Logistics',
+                                'OwnerName': 'Srinivas',
+                                'OwnerPhone': '9988776655',
+                                'OwnerHometown': 'Salem',
+                                'PANNumber': 'ABCDE1234F',
+                                'PANCardName': 'SRINIVAS R',
+                                'Bank_AccountName': 'Raju Bhai',
+                                'Bank_BankName': 'SBI',
+                                'Bank_AccountNumber': '1234567890',
+                                'Bank_IFSC': 'SBIN0001234',
+                                'Bank_UPINumber': '9999999991@ybl',
+                                'SecondaryBank_AccountName': 'Raju Bhai Self',
+                                'SecondaryBank_BankName': 'HDFC',
+                                'SecondaryBank_AccountNumber': '0987654321',
+                                'SecondaryBank_IFSC': 'HDFC0001234',
+                                'SecondaryBank_UPINumber': '9999999991@hdfc'
+                            }]
+                            : [{ 'DriverName (Compulsory)': 'Kishore', 'MobileNumber (Compulsory)': '8888888881', 'Password (Compulsory)': 'pass123', 'VehicleNumber (Compulsory)': 'KA02XY5678', 'VehicleCategory (Compulsory)': 'Sedan Regular', 'VehicleModel (Compulsory)': 'Swift Dzire', 'Status (Compulsory)': 'ONLINE' }]
+                    }
+                    uploadEndpoint={tripService.bulkCreateDriver}
                 />
             )}
         </div>

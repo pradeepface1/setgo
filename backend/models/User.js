@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'ROAD_PILOT'], // Added ROAD_PILOT
+        enum: ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'ROAD_PILOT', 'LOGISTICS_STAFF'], // Added LOGISTICS_STAFF
         default: 'ORG_ADMIN'
     },
     organizationId: {

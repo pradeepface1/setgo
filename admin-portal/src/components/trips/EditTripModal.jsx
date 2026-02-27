@@ -78,188 +78,250 @@ const EditTripModal = ({ trip, onClose, onTripUpdated }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Edit Trip</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm overflow-y-auto h-full w-full z-[9999]" onClick={onClose}>
+            <div className="relative top-10 mx-auto rounded-3xl shadow-2xl w-full max-w-3xl border transition-colors duration-500 overflow-hidden"
+                style={{ backgroundColor: 'var(--theme-bg-sidebar)', borderColor: 'rgba(255,255,255,0.05)' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center p-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <h3 className="text-xl font-bold tracking-tight" style={{ color: 'var(--theme-text-main)' }}>Edit Trip</h3>
+                    <button onClick={onClose} className="opacity-50 hover:opacity-100 transition-opacity" style={{ color: 'var(--theme-text-main)' }}>
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
-                {error && (
-                    <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-                        <p className="text-sm text-red-700">{error}</p>
-                    </div>
-                )}
+                <div className="p-6">
+                    {error && (
+                        <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                            <p className="text-sm font-medium text-red-500">{error}</p>
+                        </div>
+                    )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Customer Details */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Customer Name *</label>
-                            <input
-                                type="text"
-                                name="customerName"
-                                value={formData.customerName}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Customer Details */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Customer Name *</label>
+                                <input
+                                    type="text"
+                                    name="customerName"
+                                    value={formData.customerName}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Customer Phone *</label>
+                                <input
+                                    type="tel"
+                                    name="customerPhone"
+                                    value={formData.customerPhone}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Pickup Details */}
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Pickup Location *</label>
+                                <input
+                                    type="text"
+                                    name="pickupLocation"
+                                    value={formData.pickupLocation}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Pickup Type</label>
+                                <select
+                                    name="pickupType"
+                                    value={formData.pickupType}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none appearance-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                >
+                                    {pickupTypes.map(type => (
+                                        <option key={type.value} value={type.value}>{type.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {formData.pickupType === 'AIRPORT' && (
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Flight Number</label>
+                                    <input
+                                        type="text"
+                                        name="pickupContext.flightNumber"
+                                        value={formData.pickupContext.flightNumber}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                        style={{
+                                            backgroundColor: 'var(--theme-bg-card)',
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            color: 'var(--theme-text-main)'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {formData.pickupType === 'RAILWAY_STATION' && (
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Train Number</label>
+                                    <input
+                                        type="text"
+                                        name="pickupContext.trainNumber"
+                                        value={formData.pickupContext.trainNumber}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                        style={{
+                                            backgroundColor: 'var(--theme-bg-card)',
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            color: 'var(--theme-text-main)'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {formData.pickupType === 'BUS_STAND' && (
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Bus Number</label>
+                                    <input
+                                        type="text"
+                                        name="pickupContext.busNumber"
+                                        value={formData.pickupContext.busNumber}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                        style={{
+                                            backgroundColor: 'var(--theme-bg-card)',
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            color: 'var(--theme-text-main)'
+                                        }}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Drop Location */}
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Drop Location *</label>
+                                <input
+                                    type="text"
+                                    name="dropLocation"
+                                    value={formData.dropLocation}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Trip Date & Time */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Trip Date & Time *</label>
+                                <input
+                                    type="datetime-local"
+                                    name="tripDateTime"
+                                    value={formData.tripDateTime}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+
+                            {/* Vehicle Category */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Vehicle Category *</label>
+                                <select
+                                    name="vehicleCategory"
+                                    value={formData.vehicleCategory}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none appearance-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                >
+                                    <option value="">Select Category</option>
+                                    {vehicleCategories.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Vehicle Subcategory */}
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest mb-1 px-1" style={{ color: 'var(--theme-text-muted)' }}>Vehicle Subcategory (Optional)</label>
+                                <input
+                                    type="text"
+                                    name="vehicleSubcategory"
+                                    value={formData.vehicleSubcategory}
+                                    onChange={handleChange}
+                                    placeholder="e.g., AC, Non-AC"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Customer Phone *</label>
-                            <input
-                                type="tel"
-                                name="customerPhone"
-                                value={formData.customerPhone}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        {/* Pickup Details */}
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Pickup Location *</label>
-                            <input
-                                type="text"
-                                name="pickupLocation"
-                                value={formData.pickupLocation}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Pickup Type</label>
-                            <select
-                                name="pickupType"
-                                value={formData.pickupType}
-                                onChange={handleChange}
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                        <div className="flex justify-end gap-4 mt-8">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-6 py-2 border rounded-xl text-sm font-bold transition-all hover:bg-white/5 active:scale-95"
+                                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)' }}
                             >
-                                {pickupTypes.map(type => (
-                                    <option key={type.value} value={type.value}>{type.label}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {formData.pickupType === 'AIRPORT' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Flight Number</label>
-                                <input
-                                    type="text"
-                                    name="pickupContext.flightNumber"
-                                    value={formData.pickupContext.flightNumber}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                />
-                            </div>
-                        )}
-
-                        {formData.pickupType === 'RAILWAY_STATION' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Train Number</label>
-                                <input
-                                    type="text"
-                                    name="pickupContext.trainNumber"
-                                    value={formData.pickupContext.trainNumber}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                />
-                            </div>
-                        )}
-
-                        {formData.pickupType === 'BUS_STAND' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Bus Number</label>
-                                <input
-                                    type="text"
-                                    name="pickupContext.busNumber"
-                                    value={formData.pickupContext.busNumber}
-                                    onChange={handleChange}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                />
-                            </div>
-                        )}
-
-                        {/* Drop Location */}
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Drop Location *</label>
-                            <input
-                                type="text"
-                                name="dropLocation"
-                                value={formData.dropLocation}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        {/* Trip Date & Time */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Trip Date & Time *</label>
-                            <input
-                                type="datetime-local"
-                                name="tripDateTime"
-                                value={formData.tripDateTime}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-
-                        {/* Vehicle Category */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Vehicle Category *</label>
-                            <select
-                                name="vehicleCategory"
-                                value={formData.vehicleCategory}
-                                onChange={handleChange}
-                                required
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`px-8 py-2 rounded-xl shadow-lg text-sm font-bold transition-all active:scale-95 hover:shadow-[0_0_20px_var(--theme-primary-glow)]`}
+                                style={{ backgroundColor: 'var(--theme-primary)', color: 'white' }}
                             >
-                                <option value="">Select Category</option>
-                                {vehicleCategories.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
+                                {loading ? 'Updating...' : 'Update Trip'}
+                            </button>
                         </div>
-
-                        {/* Vehicle Subcategory */}
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Vehicle Subcategory (Optional)</label>
-                            <input
-                                type="text"
-                                name="vehicleSubcategory"
-                                value={formData.vehicleSubcategory}
-                                onChange={handleChange}
-                                placeholder="e.g., AC, Non-AC"
-                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end gap-2 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            {loading ? 'Updating...' : 'Update Trip'}
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     );

@@ -283,23 +283,11 @@ router.post('/:id/logo', authenticate, async (req, res) => {
         }
 
         const multer = require('multer');
+        const { uploadToFirebase } = require('../utils/firebase');
         const path = require('path');
-        const fs = require('fs');
-
-        // Ensure upload directory exists
-        const uploadDir = path.join(__dirname, '../uploads/org-logos');
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-        const storage = multer.diskStorage({
-            destination: (req, file, cb) => cb(null, uploadDir),
-            filename: (req, file, cb) => {
-                const ext = path.extname(file.originalname) || '.jpg';
-                cb(null, `org-${req.params.id}${ext}`);
-            }
-        });
 
         const upload = multer({
-            storage,
+            storage: multer.memoryStorage(),
             fileFilter: (req, file, cb) => {
                 if (!file.mimetype.match(/^image\/(jpeg|jpg|png|webp)$/)) {
                     return cb(new Error('Only image files (JPEG/PNG) are allowed'));
@@ -313,15 +301,34 @@ router.post('/:id/logo', authenticate, async (req, res) => {
             if (err) return res.status(400).json({ error: err.message });
             if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-            const logoUrl = `/uploads/org-logos/${req.file.filename}`;
-            const organization = await Organization.findByIdAndUpdate(
-                req.params.id,
-                { logo: logoUrl, updatedAt: Date.now() },
-                { new: true }
-            );
+            try {
+                let logoUrl = '';
 
-            if (!organization) return res.status(404).json({ error: 'Organization not found' });
-            res.json({ logo: logoUrl, organization });
+                // If the file is in memory (Cloud Run Production), push it to Firebase
+                if (req.file.buffer) {
+                    logoUrl = await uploadToFirebase(
+                        req.file.buffer,
+                        req.file.fieldname,
+                        req.file.originalname,
+                        req.file.mimetype
+                    );
+                } else {
+                    // Locally, it's saved to the disk via multer diskStorage
+                    logoUrl = `/uploads/${req.file.filename}`;
+                }
+
+                const organization = await Organization.findByIdAndUpdate(
+                    req.params.id,
+                    { logo: logoUrl, updatedAt: Date.now() },
+                    { new: true }
+                );
+
+                if (!organization) return res.status(404).json({ error: 'Organization not found' });
+                res.json({ logo: logoUrl, organization });
+            } catch (uploadError) {
+                console.error("Upload error:", uploadError);
+                res.status(500).json({ error: 'Failed to save uploaded image: ' + uploadError.message });
+            }
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -72,20 +72,14 @@ router.post('/', authenticate, async (req, res) => {
         const tripData = { ...req.body };
 
         // Auto-assign organization
-        if (req.user.role === 'SUPER_ADMIN') {
-            if (!tripData.organizationId) {
-                // If not provided, could fallback to user's choice or error
-                // For now, let's say Super Admin must specify unless testing
-                // But for manual trip creation, we might default to SetGo...
-                // Actually, if creating from UI, UI should send it, or we select one.
-                if (!tripData.organizationId) {
-                    // Try to find default SetGo org? Or error?
-                    // Let's require it for Super Admin for correctness
-                    // But to avoid breaking, maybe handle gracefully?
-                }
-            }
-        } else {
+        if (!tripData.organizationId) {
             tripData.organizationId = req.user.organizationId;
+        }
+
+        if (!tripData.organizationId && req.user.role === 'SUPER_ADMIN') {
+            // Fallback to first existing organization for super admins creating trips directly
+            const org = await require('mongoose').model('Organization').findOne();
+            if (org) tripData.organizationId = org._id;
         }
 
         if (!tripData.organizationId) {
@@ -112,6 +106,7 @@ router.post('/', authenticate, async (req, res) => {
 
         res.status(201).json(trip);
     } catch (error) {
+        require('fs').writeFileSync('/tmp/trip_debug.log', JSON.stringify({ message: error.message, stack: error.stack, body: req.body }));
         res.status(400).json({ error: 'Creation failed', details: error.message });
     }
 });
@@ -222,6 +217,7 @@ router.patch('/:id/start', authenticate, async (req, res) => {
 });
 
 const upload = require('../middleware/upload');
+const { uploadToFirebase } = require('../utils/firebase');
 
 // PATCH /api/trips/:id/complete - Mark a trip as completed (with optional drip sheet)
 router.patch('/:id/complete', authenticate, upload.single('dripSheet'), async (req, res) => {
@@ -236,9 +232,24 @@ router.patch('/:id/complete', authenticate, upload.single('dripSheet'), async (r
         trip.status = 'COMPLETED';
         trip.completionTime = new Date();
 
-        // Handle file upload
+        // Handle file upload to Firebase Storage or Local Disk
         if (req.file) {
-            trip.dripSheetImage = `/uploads/${req.file.filename}`;
+            try {
+                if (req.file.buffer) {
+                    const dripSheetUrl = await uploadToFirebase(
+                        req.file.buffer,
+                        req.file.fieldname,
+                        req.file.originalname,
+                        req.file.mimetype
+                    );
+                    trip.dripSheetImage = dripSheetUrl;
+                } else {
+                    trip.dripSheetImage = `/uploads/${req.file.filename}`;
+                }
+            } catch (uploadError) {
+                console.error("Upload error:", uploadError);
+                return res.status(500).json({ error: 'Failed to upload image: ' + uploadError.message });
+            }
         }
 
         // Save completion details
@@ -406,6 +417,207 @@ router.get('/stats', authenticate, filterByOrganization, async (req, res) => {
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: 'Stats fetch failed', details: error.message });
+    }
+});
+
+// GET /api/trips/milestones - Get trip milestone statistics (Logistics)
+router.get('/milestones', authenticate, filterByOrganization, async (req, res) => {
+    try {
+        const { vertical, startDate, endDate, consignorId, driverId } = req.query;
+        let query = { ...req.organizationFilter };
+
+        const mongoose = require('mongoose');
+        if (consignorId) query.consignorId = new mongoose.Types.ObjectId(consignorId);
+        if (driverId) query.assignedDriver = new mongoose.Types.ObjectId(driverId);
+
+        // Basic Filter Setup
+        if (vertical) {
+            const Organization = require('../models/Organization');
+            const orgs = await Organization.find({ verticals: vertical }).select('_id');
+            const orgIds = orgs.map(org => org._id);
+            if (query.organizationId) {
+                const isAllowed = orgIds.some(id => id.equals(query.organizationId));
+                if (!isAllowed) return res.json({ loadingConfirmed: 0, advancePaid: 0, lorryAdvancePending: 0, driverBalanceCollected: 0, balanceCleared: 0, consignorPending: 0, total: 0 });
+            } else {
+                query.organizationId = { $in: orgIds };
+            }
+        }
+
+        // Apply Date Filters if provided
+        if (startDate && endDate) {
+            query.tripDateTime = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        // We only care about active/completed trips for milestones (ignore Draft/Cancelled if needed, or include them)
+        query.status = { $nin: ['DRAFT', 'CANCELLED'] };
+
+        const pipeline = [
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalTrips: { $sum: 1 },
+                    consignorGiven: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        {
+                                            $or: [
+                                                { $gt: [{ $ifNull: ['$consignorAdvance', 0] }, 0] },
+                                                { $eq: ['$consignorBalanceReceiveMode', 'DIRECT_TO_DRIVER'] }
+                                            ]
+                                        },
+                                        { $in: ['$status', ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING']] }
+                                    ]
+                                },
+                                1, 0
+                            ]
+                        }
+                    },
+                    consignorPending: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $gt: [{ $ifNull: ['$balanceReceivable', 0] }, 0] }, { $in: ['$status', ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING']] }] },
+                                1, 0
+                            ]
+                        }
+                    },
+                    advancePaid: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $gt: [{ $ifNull: ['$driverAdvance', 0] }, 0] }, { $in: ['$status', ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING']] }] },
+                                1, 0
+                            ]
+                        }
+                    },
+                    lorryAdvancePending: {
+                        $sum: {
+                            $cond: [
+                                { $and: [{ $eq: [{ $ifNull: ['$driverAdvance', 0] }, 0] }, { $in: ['$status', ['LOADING']] }] },
+                                1, 0
+                            ]
+                        }
+                    }
+                }
+            }
+        ];
+
+        const stats = await Trip.aggregate(pipeline);
+
+        const result = stats.length > 0 ? stats[0] : {
+            advancePaid: 0,
+            lorryAdvancePending: 0,
+            consignorGiven: 0,
+            consignorPending: 0,
+            totalTrips: 0
+        };
+
+        delete result._id;
+        res.json(result);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Milestone fetch failed', details: error.message });
+    }
+});
+
+// GET /api/trips/milestones/details - Get trips for a specific milestone
+router.get('/milestones/details', authenticate, filterByOrganization, async (req, res) => {
+    try {
+        const { vertical, startDate, endDate, consignorId, driverId, milestone } = req.query;
+        let query = { ...req.organizationFilter };
+
+        const mongoose = require('mongoose');
+        if (consignorId) query.consignorId = new mongoose.Types.ObjectId(consignorId);
+        if (driverId) query.assignedDriver = new mongoose.Types.ObjectId(driverId);
+
+        if (vertical) {
+            const Organization = require('../models/Organization');
+            const orgs = await Organization.find({ verticals: vertical }).select('_id');
+            const orgIds = orgs.map(org => org._id);
+            if (query.organizationId) {
+                const isAllowed = orgIds.some(id => id.equals(query.organizationId));
+                if (!isAllowed) return res.json([]);
+            } else {
+                query.organizationId = { $in: orgIds };
+            }
+        }
+
+        if (startDate && endDate) {
+            query.tripDateTime = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        query.status = { $nin: ['DRAFT', 'CANCELLED'] };
+
+        if (milestone === 'advancePaid') {
+            query.driverAdvance = { $gt: 0 };
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else if (milestone === 'lorryAdvancePending') {
+            query.driverAdvance = { $ifNull: ['$driverAdvance', 0] }; // Handle nulls if necessary, but $lte 0 usually works
+            query.driverAdvance = { $lte: 0 };
+            query.status = { $in: ['LOADING'] };
+        } else if (milestone === 'consignorGiven') {
+            query.$or = [
+                { consignorAdvance: { $gt: 0 } },
+                { consignorBalanceReceiveMode: 'DIRECT_TO_DRIVER' }
+            ];
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else if (milestone === 'consignorPending') {
+            query.balanceReceivable = { $gt: 0 };
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else {
+            return res.status(400).json({ error: 'Invalid milestone type' });
+        }
+
+        const trips = await Trip.find(query)
+            .select('driverName vehicleNumber tripDateTime handLoan commissionAmount driverBalanceCollectedAmount driverAdvance balancePayableToDriver driverBalancePaid balanceReceivable status lorryName expectedWeight actualWeight assignedDriver consignorMobile consignorName toPayAmount')
+            .sort({ tripDateTime: -1 })
+            .limit(500); // safety limit
+
+        res.json(trips);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Milestone details fetch failed', details: error.message });
+    }
+});
+
+// GET /api/trips/test-milestones - Test endpoint 
+router.get('/test-milestones', async (req, res) => {
+    try {
+        const { milestone } = req.query;
+        let query = {};
+
+        query.status = { $nin: ['DRAFT', 'CANCELLED'] };
+
+        if (milestone === 'advancePaid') {
+            query.driverAdvance = { $gt: 0 };
+            query.status = { $in: ['IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else if (milestone === 'lorryAdvancePending') {
+            query.driverAdvance = { $lte: 0 };
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else if (milestone === 'consignorGiven') {
+            query.consignorAdvance = { $gt: 0 };
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        } else if (milestone === 'consignorPending') {
+            query.balanceReceivable = { $gt: 0 };
+            query.status = { $in: ['LOADING', 'IN_TRANSIT', 'UNLOADED', 'COMPLETED', 'PAYMENT_PENDING'] };
+        }
+
+        const trips = await Trip.find(query)
+            .select('driverName vehicleNumber tripDateTime handLoan commissionAmount driverBalanceCollectedAmount driverAdvance balancePayableToDriver driverBalancePaid balanceReceivable status lorryName expectedWeight actualWeight assignedDriver consignorMobile consignorName toPayAmount')
+            .sort({ tripDateTime: -1 })
+            .limit(10);
+
+        res.json(trips);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Milestone details fetch failed', details: error.message });
     }
 });
 

@@ -6,8 +6,13 @@ class ApiService {
   late Dio _dio;
 
   ApiService() {
+    const String baseUrl = String.fromEnvironment(
+      'BASE_URL',
+      defaultValue: 'https://backend-191882634358.asia-south1.run.app/api',
+    );
+
     _dio = Dio(BaseOptions(
-      baseUrl: Constants.baseUrl,
+      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {

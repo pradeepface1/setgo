@@ -10,12 +10,28 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
     const driverVertical = vertical || driver.vertical || 'TAXI';
     const isLogistics = driverVertical === 'LOGISTICS';
 
+    const taxiVehicleCategories = [
+        'Sedan Regular', 'Sedan Premium', 'Sedan Premium+',
+        'SUV Regular', 'SUV Premium',
+        'Tempo Traveller', 'Force Premium',
+        'Bus', 'High-End Coach', 'Others'
+    ];
+    const logisticsVehicleCategories = [
+        '10 wheeler', '12 wheeler', '14 wheeler', '16 wheeler', '20ft Container', '32ft Container', 'Others'
+    ];
+    const vehicleCategories = isLogistics ? logisticsVehicleCategories : taxiVehicleCategories;
+
+    const initialCategory = driver.vehicleCategory || (isLogistics ? '10 wheeler' : 'Sedan Regular');
+    const isCustomCat = !vehicleCategories.includes(initialCategory) && initialCategory;
+
+    const [customCategory, setCustomCategory] = useState(isCustomCat ? initialCategory : '');
+
     const [formData, setFormData] = useState({
         name: driver.name || '',
         phone: driver.phone || '',
         vehicleModel: driver.vehicleModel || '',
         vehicleNumber: driver.vehicleNumber || '',
-        vehicleCategory: driver.vehicleCategory || (isLogistics ? 'LCV' : 'Sedan Regular'),
+        vehicleCategory: isCustomCat ? 'Others' : initialCategory,
         status: driver.status || 'OFFLINE',
         rating: driver.rating || 5.0,
         organizationId: driver.organizationId?._id || driver.organizationId || '',
@@ -24,20 +40,22 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
         ownerName: driver.ownerName || '',
         ownerPhone: driver.ownerPhone || '',
         ownerHometown: driver.ownerHometown || '',
+        panNumber: driver.panNumber || '',
+        panCardName: driver.panCardName || '',
+        accountName: driver.bankDetails?.accountName || '',
+        bankName: driver.bankDetails?.bankName || '',
+        accountNumber: driver.bankDetails?.accountNumber || '',
+        ifsc: driver.bankDetails?.ifsc || '',
+        upiNumber: driver.bankDetails?.upiNumber || '',
+        secondaryAccountName: driver.secondaryBankDetails?.accountName || '',
+        secondaryBankName: driver.secondaryBankDetails?.bankName || '',
+        secondaryAccountNumber: driver.secondaryBankDetails?.accountNumber || '',
+        secondaryIfsc: driver.secondaryBankDetails?.ifsc || '',
+        secondaryUpiNumber: driver.secondaryBankDetails?.upiNumber || '',
+        dtsDocument: null // File tracking
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
-    const taxiVehicleCategories = [
-        'Sedan Regular', 'Sedan Premium', 'Sedan Premium+',
-        'SUV Regular', 'SUV Premium',
-        'Tempo Traveller', 'Force Premium',
-        'Bus', 'High-End Coach'
-    ];
-
-    const logisticsVehicleCategories = ['LCV', 'HCV', 'Trailer', 'Container', 'Tanker', 'Other'];
-
-    const vehicleCategories = isLogistics ? logisticsVehicleCategories : taxiVehicleCategories;
 
     const vehicleModels = {
         'Sedan Regular': ['Swift Dzire', 'Etios', 'Aura'],
@@ -72,7 +90,12 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
     }, [user]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, files } = e.target;
+
+        if (type === 'file') {
+            setFormData(prev => ({ ...prev, [name]: files[0] }));
+            return;
+        }
 
         if (name === 'vehicleCategory') {
             setFormData(prev => ({
@@ -94,7 +117,48 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
         setError(null);
 
         try {
-            await tripService.updateDriver(driver._id, formData);
+            const payload = { ...formData };
+            if (payload.vehicleCategory === 'Others') {
+                payload.vehicleCategory = customCategory || 'Others';
+                payload.vehicleModel = ''; // Nullify model if using Others
+            }
+
+            if (isLogistics) {
+                payload.bankDetails = {
+                    accountName: formData.accountName,
+                    bankName: formData.bankName,
+                    accountNumber: formData.accountNumber,
+                    ifsc: formData.ifsc,
+                    upiNumber: formData.upiNumber
+                };
+
+                payload.secondaryBankDetails = {
+                    accountName: formData.secondaryAccountName,
+                    bankName: formData.secondaryBankName,
+                    accountNumber: formData.secondaryAccountNumber,
+                    ifsc: formData.secondaryIfsc,
+                    upiNumber: formData.secondaryUpiNumber
+                };
+
+                delete payload.accountName;
+                delete payload.bankName;
+                delete payload.accountNumber;
+                delete payload.ifsc;
+                delete payload.upiNumber;
+                delete payload.secondaryAccountName;
+                delete payload.secondaryBankName;
+                delete payload.secondaryAccountNumber;
+                delete payload.secondaryIfsc;
+                delete payload.secondaryUpiNumber;
+
+                if (formData.dtsDocument instanceof File) {
+                    payload.dtsDocument = `https://storage.googleapis.com/setgo-dts/${formData.dtsDocument.name}`;
+                } else {
+                    delete payload.dtsDocument; // Keep existing if not newly uploaded
+                }
+            }
+
+            await tripService.updateDriver(driver._id, payload);
             onDriverUpdated();
             onClose();
         } catch (err) {
@@ -106,7 +170,7 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-start justify-center pt-24 pb-12 z-50">
-            <div className="relative w-full max-w-2xl mx-4 p-5 border shadow-lg rounded-md bg-white">
+            <div className="relative theme-modal w-full max-w-2xl mx-4 p-5 border shadow-lg rounded-md">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium">Edit Driver</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
@@ -172,18 +236,25 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Vehicle Model {!isLogistics && '*'}</label>
-                            {isLogistics ? (
+                        {formData.vehicleCategory === 'Others' && (
+                            <div className="mt-2">
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Custom Category Name *
+                                </label>
                                 <input
                                     type="text"
-                                    name="vehicleModel"
-                                    value={formData.vehicleModel}
-                                    onChange={handleChange}
-                                    placeholder="e.g. Lorry name or model"
+                                    value={customCategory}
+                                    onChange={(e) => setCustomCategory(e.target.value)}
+                                    required
                                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                    placeholder="e.g., Tractor Trailer"
                                 />
-                            ) : (
+                            </div>
+                        )}
+
+                        {formData.vehicleCategory !== 'Others' && !isLogistics && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Vehicle Model *</label>
                                 <select
                                     name="vehicleModel"
                                     value={formData.vehicleModel}
@@ -195,8 +266,8 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
                                         <option key={model} value={model}>{model}</option>
                                     ))}
                                 </select>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Vehicle Number *</label>
@@ -293,6 +364,81 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
                                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">PAN Number</label>
+                                    <input type="text" name="panNumber" value={formData.panNumber} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">PAN Card Holder Name</label>
+                                    <input type="text" name="panCardName" value={formData.panCardName} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" />
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <h4 className="text-sm font-semibold text-gray-600 mb-3">DTS Document Upload</h4>
+                                <div className="flex flex-col gap-2">
+                                    <label className="block text-sm font-medium text-gray-700">Update DTS Document (Image/PDF)</label>
+                                    {driver.dtsDocument && <a href={driver.dtsDocument} target="_blank" rel="noreferrer" className="text-xs text-blue-600">View Current DTS Document</a>}
+                                    <input
+                                        type="file"
+                                        name="dtsDocument"
+                                        accept="image/*,.pdf"
+                                        onChange={handleChange}
+                                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-jubilant-50 file:text-jubilant-700 hover:file:bg-jubilant-100"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <h4 className="text-sm font-semibold text-gray-600 mb-3">Primary Bank Details</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Account Name</label>
+                                        <input type="text" name="accountName" value={formData.accountName} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+                                        <input type="text" name="bankName" value={formData.bankName} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                                        <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">IFSC Code</label>
+                                        <input type="text" name="ifsc" value={formData.ifsc} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700">UPI Number</label>
+                                        <input type="text" name="upiNumber" value={formData.upiNumber} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4">
+                                <h4 className="text-sm font-semibold text-gray-600 mb-3">Secondary Bank Details</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Account Name</label>
+                                        <input type="text" name="secondaryAccountName" value={formData.secondaryAccountName} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+                                        <input type="text" name="secondaryBankName" value={formData.secondaryBankName} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                                        <input type="text" name="secondaryAccountNumber" value={formData.secondaryAccountNumber} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">IFSC Code</label>
+                                        <input type="text" name="secondaryIfsc" value={formData.secondaryIfsc} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700">UPI Number</label>
+                                        <input type="text" name="secondaryUpiNumber" value={formData.secondaryUpiNumber} onChange={handleChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -314,8 +460,8 @@ const EditDriverModal = ({ driver, onClose, onDriverUpdated, vertical }) => {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

@@ -64,17 +64,18 @@ router.post('/', authenticate, async (req, res) => {
         }
 
         // Check for duplicate name within the same organization
+        const normalizedName = name.replace(/\s+/g, ' ').trim();
         const existing = await Consignor.findOne({
             organizationId,
-            name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+            name: { $regex: new RegExp(`^${normalizedName}$`, 'i') }
         });
         if (existing) {
-            return res.status(409).json({ error: `A consignor named "${name}" already exists.` });
+            return res.status(409).json({ error: `A consignor named "${normalizedName}" already exists.` });
         }
 
         const newConsignor = new Consignor({
             organizationId,
-            name,
+            name: normalizedName,
             contactPerson,
             phone,
             email,
@@ -87,6 +88,83 @@ router.post('/', authenticate, async (req, res) => {
         res.status(201).json(newConsignor);
     } catch (error) {
         res.status(400).json({ error: 'Creation failed', details: error.message });
+    }
+});
+
+// POST /api/consignors/bulk - Bulk create consignors
+router.post('/bulk', authenticate, async (req, res) => {
+    try {
+        const { consignors } = req.body;
+
+        let organizationId = req.body.organizationId;
+        if (req.user.role !== 'SUPER_ADMIN') {
+            organizationId = req.user.organizationId;
+        }
+
+        if (!organizationId) {
+            return res.status(400).json({ error: 'Organization ID is required' });
+        }
+
+        if (!Array.isArray(consignors) || consignors.length === 0) {
+            return res.status(400).json({ error: 'A valid array of consignors is required.' });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        for (let i = 0; i < consignors.length; i++) {
+            const row = consignors[i];
+            const name = row['ConsignorName (Compulsory)'] || row.name || row.ConsignorName;
+            const contactPerson = row['ContactPerson (Compulsory)'] || row.contactPerson || row.ContactPerson;
+            const phone = row['MobileNumber (Compulsory)'] || row.phone || row.MobileNumber;
+            const email = row['Email (Compulsory)'] || row.email || row.Email;
+            const address = row['Address (Compulsory)'] || row.address || row.Address;
+            const gstin = row['GSTIN (Compulsory)'] || row.gstin || row.GSTIN;
+
+            if (!name || !contactPerson || !phone || !email || !address || !gstin) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: All fields are compulsory. Ensure ConsignorName, ContactPerson, MobileNumber, Email, Address, and GSTIN are provided.`);
+                continue;
+            }
+
+            // Uniqueness validation (Requirement 2)
+            const normalizedName = name.replace(/\s+/g, ' ').trim();
+            const existing = await Consignor.findOne({
+                organizationId,
+                name: { $regex: new RegExp(`^${normalizedName}$`, 'i') }
+            });
+
+            if (existing) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: A consignor named "${normalizedName}" already exists.`);
+                continue;
+            }
+
+            try {
+                const newConsignor = new Consignor({
+                    organizationId,
+                    name: normalizedName,
+                    contactPerson: contactPerson.trim(),
+                    phone: phone.toString().trim(),
+                    email: email.trim(),
+                    address: address.trim(),
+                    gstin: gstin.trim().toUpperCase()
+                });
+                await newConsignor.save();
+                results.success++;
+            } catch (err) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: ${err.message}`);
+            }
+        }
+
+        res.status(200).json(results);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Bulk creation failed', details: error.message });
     }
 });
 

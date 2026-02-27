@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
@@ -6,6 +7,7 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   bool _isLoading = false;
   String? _error;
+  Timer? _idleTimer;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
@@ -32,7 +34,17 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
+    _idleTimer?.cancel();
     notifyListeners();
+  }
+
+  void resetIdleTimer() {
+    _idleTimer?.cancel();
+    if (_user != null) {
+      _idleTimer = Timer(const Duration(minutes: 1), () {
+        logout();
+      });
+    }
   }
 
   Future<void> checkLoginStatus() async {

@@ -31,7 +31,16 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF667EEA)),
           useMaterial3: true,
         ),
-        home: const AuthWrapper(),
+        home: Builder(
+          builder: (context) {
+            return Listener(
+              onPointerDown: (_) {
+                Provider.of<AuthProvider>(context, listen: false).resetIdleTimer();
+              },
+              child: const AuthWrapper(),
+            );
+          }
+        ),
       ),
     );
   }

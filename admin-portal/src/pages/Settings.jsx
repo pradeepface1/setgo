@@ -16,7 +16,8 @@ const Settings = () => {
     const [selectedFont, setSelectedFont] = useState(font);
     const [selectedTheme, setSelectedTheme] = useState(activeTheme);
     const [receiptConfig, setReceiptConfig] = useState(preferences?.theme || {});
-    const [receiptTemplate, setReceiptTemplate] = useState(preferences?.pdfSettings?.slipTemplate || 'STANDARD');
+    // We maintain this state in the background to not break existing dependencies
+    const [receiptTemplate, setReceiptTemplate] = useState('KARUR_CUSTOM');
 
     // Logo State
     const [logoFile, setLogoFile] = useState(null);
@@ -330,140 +331,120 @@ const Settings = () => {
                         </div>
                         <p className="text-sm mb-4" style={{ color: 'var(--theme-text-muted)' }}>Customize the exact text that appears on your generated Slips.</p>
 
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-main)' }}>Global Layout Template</label>
-                            <select
-                                value={receiptTemplate}
-                                onChange={(e) => setReceiptTemplate(e.target.value)}
-                                className="block w-full max-w-md px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 transition-all duration-300"
-                                style={{
-                                    backgroundColor: 'var(--theme-bg-sidebar)',
-                                    color: 'var(--theme-text-main)',
-                                    borderColor: 'rgba(255,255,255,0.1)',
-                                    '--tw-ring-color': 'var(--theme-primary)'
-                                }}
-                            >
-                                <option value="STANDARD">Standard Default Layout</option>
-                                <option value="KARUR_CUSTOM">Karur Detailed Layout</option>
-                            </select>
-                        </div>
-
-                        {receiptTemplate === 'KARUR_CUSTOM' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-white/5 pt-4">
-                                <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Top Slogan</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.slogan || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, slogan: e.target.value })}
-                                        placeholder="e.g. ll Sri Murugan Thunai ll"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Company Header</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.companyHeader || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, companyHeader: e.target.value })}
-                                        placeholder="e.g. N.S. KARUR ROADWAYS"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm font-bold transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Company Sub-Header</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.companySubHeader || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, companySubHeader: e.target.value })}
-                                        placeholder="e.g. TRANSPORT CONTRACTORS & COMMISSION AGENTS"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Phone Line 1 (Right Aligned)</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.phoneLine1 || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, phoneLine1: e.target.value })}
-                                        placeholder="e.g. Phone : 9448275227, 9739361561"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Phone Line 2 (Right Aligned)</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.phoneLine2 || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, phoneLine2: e.target.value })}
-                                        placeholder="e.g. 080-28523888, 080-28523777"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Address Line 1</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.addressLine1 || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, addressLine1: e.target.value })}
-                                        placeholder="e.g. # 32, Behind HP Petrol Bunk, Old Chandapura"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
-                                <div className="md:col-span-2">
-                                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Address Line 2</label>
-                                    <input
-                                        type="text"
-                                        value={receiptConfig.addressLine2 || ''}
-                                        onChange={(e) => setReceiptConfig({ ...receiptConfig, addressLine2: e.target.value })}
-                                        placeholder="e.g. Thirumagondanahalli Cross, Anekal Taluk, Bengaluru - 560099"
-                                        className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
-                                        style={{
-                                            backgroundColor: 'var(--theme-bg-sidebar)',
-                                            color: 'var(--theme-text-main)',
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            '--tw-ring-color': 'var(--theme-primary)'
-                                        }}
-                                    />
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-white/5 pt-4">
+                            <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Top Slogan</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.slogan || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, slogan: e.target.value })}
+                                    placeholder="e.g. ll Sri Murugan Thunai ll"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
                             </div>
-                        )}
+                            <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Company Header</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.companyHeader || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, companyHeader: e.target.value })}
+                                    placeholder="e.g. N.S. KARUR ROADWAYS"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm font-bold transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Company Sub-Header</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.companySubHeader || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, companySubHeader: e.target.value })}
+                                    placeholder="e.g. TRANSPORT CONTRACTORS & COMMISSION AGENTS"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Phone Line 1 (Right Aligned)</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.phoneLine1 || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, phoneLine1: e.target.value })}
+                                    placeholder="e.g. Phone : 9448275227, 9739361561"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Phone Line 2 (Right Aligned)</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.phoneLine2 || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, phoneLine2: e.target.value })}
+                                    placeholder="e.g. 080-28523888, 080-28523777"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Address Line 1</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.addressLine1 || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, addressLine1: e.target.value })}
+                                    placeholder="e.g. # 32, Behind HP Petrol Bunk, Old Chandapura"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--theme-text-main)' }}>Address Line 2</label>
+                                <input
+                                    type="text"
+                                    value={receiptConfig.addressLine2 || ''}
+                                    onChange={(e) => setReceiptConfig({ ...receiptConfig, addressLine2: e.target.value })}
+                                    placeholder="e.g. Thirumagondanahalli Cross, Anekal Taluk, Bengaluru - 560099"
+                                    className="w-full px-4 py-2 border rounded-xl focus:ring-2 text-sm transition-all duration-300"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-sidebar)',
+                                        color: 'var(--theme-text-main)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        '--tw-ring-color': 'var(--theme-primary)'
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

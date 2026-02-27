@@ -24,7 +24,7 @@ const DriverSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['ONLINE', 'OFFLINE', 'BUSY'],
+        enum: ['ONLINE', 'OFFLINE', 'BUSY', 'ON_DUTY', 'OFF_DUTY'],
         default: 'OFFLINE'
     },
     currentLocation: {
@@ -38,15 +38,19 @@ const DriverSchema = new mongoose.Schema({
     ownerPhone: String,
     ownerHometown: String,
     panNumber: String,
-
-    // Fleet Compliance Documents
-    fcStatus: Date,       // Fitness Certificate Expiry
-    insuranceExpiry: Date,
-    taxExpiry: Date,
+    panCardName: String,
+    dtsDocument: String, // Cloud URL
 
     isActive: { type: Boolean, default: true },
 
     bankDetails: {
+        accountName: String,
+        bankName: String,
+        accountNumber: String,
+        ifsc: String,
+        upiNumber: String
+    },
+    secondaryBankDetails: {
         accountName: String,
         bankName: String,
         accountNumber: String,

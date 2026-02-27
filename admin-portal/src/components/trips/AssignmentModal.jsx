@@ -30,6 +30,12 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
             alert("Please select a driver first");
             return;
         }
+
+        if (selectedDriver.status === 'OFFLINE') {
+            const proceed = window.confirm(`Driver ${selectedDriver.name} is currently OFFLINE. Do you want to force them ONLINE and assign this trip?`);
+            if (!proceed) return;
+        }
+
         setAssigning(true);
         try {
             await tripService.assignDriver(trip._id, selectedDriver._id);
@@ -44,10 +50,7 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
 
 
     // Filter drivers based on vehicle category and subcategory
-    // Only show ONLINE drivers
-    const onlineDrivers = drivers.filter(d => d.status === 'ONLINE');
-
-    const filteredDrivers = onlineDrivers.filter(d => {
+    const filteredDrivers = drivers.filter(d => {
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
         return (
@@ -83,39 +86,50 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
     const otherDrivers = filteredDrivers.filter(d => !suggestedDrivers.includes(d));
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-[9999]">
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="text-xl font-semibold text-gray-900">Assign Driver</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm overflow-y-auto h-full w-full flex items-center justify-center z-[9999]">
+            <div className="relative rounded-3xl shadow-2xl w-full max-w-md mx-4 border transition-colors duration-500 overflow-hidden"
+                style={{ backgroundColor: 'var(--theme-bg-sidebar)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <h3 className="text-xl font-bold tracking-tight" style={{ color: 'var(--theme-text-main)' }}>Assign Driver</h3>
+                    <button onClick={onClose} className="opacity-50 hover:opacity-100 transition-opacity" style={{ color: 'var(--theme-text-main)' }}>
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
-                <div className="p-4">
-                    <div className="mb-4 bg-gray-50 p-3 rounded text-sm text-gray-700">
-                        <p><strong>Trip:</strong> {trip.pickupLocation} → {trip.dropLocation}</p>
-                        <p><strong>Vehicle:</strong> {trip.vehicleCategory || trip.vehiclePreference} {trip.vehicleSubcategory && `- ${trip.vehicleSubcategory}`} • {new Date(trip.tripDateTime).toLocaleTimeString()}</p>
+                <div className="p-6">
+                    <div className="mb-6 p-4 rounded-xl text-sm border shadow-sm transition-colors duration-500"
+                        style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <p className="mb-1" style={{ color: 'var(--theme-text-muted)' }}>
+                            <strong style={{ color: 'var(--theme-text-main)' }}>Trip:</strong> {trip.pickupLocation} → {trip.dropLocation}
+                        </p>
+                        <p style={{ color: 'var(--theme-text-muted)' }}>
+                            <strong style={{ color: 'var(--theme-text-main)' }}>Vehicle:</strong> {trip.vehicleCategory || trip.vehiclePreference} {trip.vehicleSubcategory && `- ${trip.vehicleSubcategory}`} • {new Date(trip.tripDateTime).toLocaleTimeString()}
+                        </p>
                     </div>
 
-                    <div className="mb-4">
+                    <div className="mb-6">
                         <input
                             type="text"
                             placeholder="Search by name or vehicle..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-jubilant-500 focus:border-jubilant-500 sm:text-sm"
+                            className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                            style={{
+                                backgroundColor: 'var(--theme-bg-card)',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                color: 'var(--theme-text-main)'
+                            }}
                             autoFocus
                         />
                     </div>
 
-                    <p className="text-sm font-medium text-gray-700 mb-2">Select Driver</p>
+                    <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--theme-text-muted)' }}>Select Driver</p>
 
                     <div className="max-h-60 overflow-y-auto space-y-2">
-                        {loading ? <p className="text-center text-gray-500 py-4">Loading drivers...</p> : (
+                        {loading ? <p className="text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>Loading drivers...</p> : (
                             <>
                                 {suggestedDrivers.length > 0 && (
-                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Suggested</div>
+                                    <div className="text-[10px] font-bold uppercase tracking-widest mb-2 px-1" style={{ color: 'var(--theme-primary)' }}>Suggested</div>
                                 )}
                                 {suggestedDrivers.map(driver => (
                                     <DriverOption
@@ -124,6 +138,10 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
                                         selected={selectedDriver?._id === driver._id}
                                         onSelect={() => setSelectedDriver(driver)}
                                         onAssignNow={() => {
+                                            if (driver.status === 'OFFLINE') {
+                                                const proceed = window.confirm(`Driver ${driver.name} is currently OFFLINE. Do you want to force them ONLINE and assign this trip?`);
+                                                if (!proceed) return;
+                                            }
                                             setSelectedDriver(driver);
                                             // Ideally call handleAssign here but state update may be async
                                             // So calling service directly
@@ -140,7 +158,7 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
                                 ))}
 
                                 {otherDrivers.length > 0 && (
-                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-4 mb-1">Others</div>
+                                    <div className="text-[10px] font-bold uppercase tracking-widest mt-6 mb-2 px-1" style={{ color: 'var(--theme-text-muted)' }}>Others</div>
                                 )}
                                 {otherDrivers.map(driver => (
                                     <DriverOption
@@ -149,6 +167,10 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
                                         selected={selectedDriver?._id === driver._id}
                                         onSelect={() => setSelectedDriver(driver)}
                                         onAssignNow={() => {
+                                            if (driver.status === 'OFFLINE') {
+                                                const proceed = window.confirm(`Driver ${driver.name} is currently OFFLINE. Do you want to force them ONLINE and assign this trip?`);
+                                                if (!proceed) return;
+                                            }
                                             setAssigning(true);
                                             tripService.assignDriver(trip._id, driver._id)
                                                 .then(() => {
@@ -161,23 +183,25 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
                                     />
                                 ))}
 
-                                {drivers.length === 0 && <p className="text-sm text-gray-500 text-center">No drivers found.</p>}
+                                {drivers.length === 0 && <p className="text-sm text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>No drivers found.</p>}
                             </>
                         )}
                     </div>
                 </div>
 
-                <div className="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                <div className="p-6 border-t rounded-b-lg flex justify-end space-x-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-white"
+                        className="px-6 py-2 border rounded-xl text-sm font-bold transition-all hover:bg-white/5 active:scale-95"
+                        style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)' }}
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleAssign}
                         disabled={assigning}
-                        className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 ${!selectedDriver ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`px-6 py-2 rounded-xl shadow-lg text-sm font-bold transition-all active:scale-95 flex items-center gap-2 ${!selectedDriver ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-[0_0_20px_var(--theme-primary-glow)]'}`}
+                        style={{ backgroundColor: 'var(--theme-primary)', color: 'white' }}
                     >
                         {assigning ? 'Assigning...' : 'Assign Driver'}
                     </button>
@@ -189,19 +213,18 @@ const AssignmentModal = ({ trip, onClose, onAssignSuccess }) => {
 
 const DriverOption = ({ driver, selected, onSelect, onAssignNow }) => (
     <div
-        className={`flex items-center p-3 rounded-lg border transition-colors ${selected ? 'border-jubilant-500 bg-jubilant-50' : 'border-gray-200 hover:border-gray-300'}`}
+        onClick={onSelect}
+        className={`flex items-center p-3 rounded-xl border transition-all duration-300 cursor-pointer ${selected ? 'border-[var(--theme-primary)]' : 'border-white/5 hover:border-white/10'}`}
+        style={selected ? { backgroundColor: 'rgba(var(--theme-primary-rgb), 0.1)' } : { backgroundColor: 'var(--theme-bg-card)' }}
     >
-        <div
-            onClick={onSelect}
-            className="flex-1 flex items-center cursor-pointer"
-        >
-            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${selected ? 'bg-jubilant-200 text-jubilant-700' : 'bg-gray-100 text-gray-500'}`}>
+        <div className="flex-1 flex items-center">
+            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors duration-300 ${selected ? 'bg-[var(--theme-primary)] text-white' : 'bg-white/5 text-slate-400'}`}>
                 <User className="h-5 w-5" />
             </div>
             <div className="ml-3 flex-1">
-                <p className={`text-sm font-medium ${selected ? 'text-gray-900' : 'text-gray-700'}`}>{driver.name}</p>
-                <div className="flex items-center text-xs text-gray-500">
-                    <Car className="h-3 w-3 mr-1" />
+                <p className="text-sm font-bold" style={{ color: 'var(--theme-text-main)' }}>{driver.name}</p>
+                <div className="flex items-center text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+                    <Car className="h-3 w-3 mr-1 opacity-50" />
                     {driver.vehicleModel} ({driver.vehicleNumber})
                 </div>
             </div>
@@ -209,9 +232,9 @@ const DriverOption = ({ driver, selected, onSelect, onAssignNow }) => (
 
         <div className="ml-4 flex items-center gap-2">
             {driver.status === 'ONLINE' ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Online</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-500/10 text-green-500 border border-green-500/20">Online</span>
             ) : (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{driver.status}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white/5 text-slate-400 border border-white/10">{driver.status}</span>
             )}
 
             <button
@@ -220,7 +243,8 @@ const DriverOption = ({ driver, selected, onSelect, onAssignNow }) => (
                     onAssignNow(driver);
                 }}
                 disabled={driver.status !== 'ONLINE'}
-                className="ml-2 px-3 py-1 bg-jubilant-600 text-white text-xs font-medium rounded hover:bg-jubilant-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="ml-2 px-3 py-1 text-white text-[10px] font-bold uppercase rounded-lg transition-all hover:scale-105 disabled:opacity-30 disabled:hover:scale-100"
+                style={{ backgroundColor: 'var(--theme-primary)' }}
             >
                 Assign
             </button>

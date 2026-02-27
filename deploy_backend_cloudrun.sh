@@ -10,10 +10,12 @@ SERVICE_NAME="backend"
 
 # Deploy
 gcloud run deploy $SERVICE_NAME \
-  --source . \
+  --source backend \
   --project $PROJECT_ID \
   --region $REGION \
   --allow-unauthenticated \
+  --clear-base-image \
+  --update-env-vars "MONGO_URI=mongodb+srv://pradeep:Fat52Row1!@setgo.lrqbayp.mongodb.net/?appName=SetGo" \
   --quiet
 
 echo "Deployment Complete!"

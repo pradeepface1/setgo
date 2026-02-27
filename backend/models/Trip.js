@@ -52,7 +52,7 @@ const TripSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: [
-            'PENDING', 'ACCEPTED', 'ASSIGNED', 'STARTED', 'COMPLETED', 'CANCELLED',
+            'DRAFT', 'PENDING', 'ACCEPTED', 'ASSIGNED', 'STARTED', 'COMPLETED', 'CANCELLED',
             // Logistics Statuses
             'LOADING', 'IN_TRANSIT', 'UNLOADED', 'PAYMENT_PENDING'
         ],
@@ -108,25 +108,43 @@ const TripSchema = new mongoose.Schema({
     driverAdvance: Number,      // Paid to driver
     driverAdvancePaymentMode: {
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK', 'PRIMARY BANK', 'SECONDARY BANK', 'DIRECT_TO_DRIVER'],
         default: 'CASH'
     },
     driverPaymentAccount: String, // E.g. 0032, 4650, Book
     consignorAdvance: Number,   // Received from consignor
     consignorAdvancePaymentMode: {
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE', 'BOOK'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE', 'BOOK', 'book', '0032', '4650', '5227', '0112', 'DIRECT_TO_DRIVER'],
         default: 'CASH'
     },
     consignorPaymentAccount: String, // E.g. 0032, 4650, Book
     paymentMode: { // Deprecated mostly, but keeping for legacy
         type: String,
-        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK'],
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'DIESEL', 'CREDIT', 'BOOK', 'PRIMARY BANK', 'SECONDARY BANK'],
         default: 'CASH'
     },
     // Calculated Balances
     balanceReceivable: Number, // From Consignor
     balancePayableToDriver: Number, // To Driver/Owner
+
+    // Balance Settlements
+    driverBalancePaid: Number,
+    driverBalancePaidDate: Date,
+    driverBalancePaymentMode: {
+        type: String,
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE', 'BOOK', 'PRIMARY BANK', 'SECONDARY BANK', 'DIRECT_TO_DRIVER'],
+        default: 'CASH'
+    },
+    driverBalancePaymentAccount: String,
+    consignorBalanceReceived: Number,
+    consignorBalanceReceivedDate: Date,
+    consignorBalanceReceiveMode: {
+        type: String,
+        enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'CHEQUE', 'BOOK', 'book', '0032', '4650', '5227', '0112', 'DIRECT_TO_DRIVER'],
+        default: 'CASH'
+    },
+    consignorBalanceReceiveAccount: String,
 
     // Driver Payables (Expense Side)
     driverRatePerTon: Number,
@@ -134,16 +152,33 @@ const TripSchema = new mongoose.Schema({
     loadingCharge: Number,      // Costing side (payable to labor)
     unloadingCharge: Number,    // Costing side (payable to labor)
     driverLoadingCommission: Number, // Commission deducted from Hire Value
-    driverOtherExpenses: Number, // Additional deductable expenses
+    driverOtherExpenses: Number, // Additional deductable expenses (Total Sum)
+    driverOtherExpensesDetails: [{
+        expenseType: { type: String, enum: ['Payment Mamul', 'Claim', 'Loading/Unloading Charges', 'Shortage', 'Others'] },
+        customName: String,
+        amount: Number
+    }],
 
     // Consignor Receivables
+    billedWeight: Number,       // Ton of Weight for billing
     loadingMamul: Number,       // Billing side
+    consignorUnloadingMamul: Number,
+    tds: Number,
+    consignorPaymentMamul: Number,
+    roundOff: Number,
     consignorName: String,     // Free text name if ID not present
+    consignorMobile: String,   // Added to persist consignor mobile number
 
     // Document Generation
     hireSlipNo: Number,        // Auto-incrementing L.R. / Hire Slip Number
 
     // Proof Documents
+    podStatus: {
+        type: String,
+        enum: ['Yes', 'No', 'Late', 'Shortage', 'Plenty'],
+        default: 'No'
+    },
+    podReceivedDate: Date,
     documents: [{
         type: { type: String, enum: ['LR', 'POD', 'WEIGHT_SLIP', 'OTHER'] },
         url: String,
@@ -160,6 +195,35 @@ const TripSchema = new mongoose.Schema({
 
     consignmentItem: String, // Added field
     loadingDate: Date,       // Added field for Logistics Loading Date
+
+    // To Pay Tracking (Consignor pays Driver directly; Driver owes Commission back to Company)
+    toPayAmount: { type: Number, default: 0 },
+    toPayCommission: { type: Number, default: 0 },
+    toPayPendingCommission: { type: Number, default: 0 },  // Commission still owed to admin
+    toPayDate: { type: Date },
+
+    // HL - Hand Loan (Amount given to driver at delivery point)
+    handLoan: {
+        amount: { type: Number, default: 0 },
+        paidDate: { type: Date },
+        paymentMode: {
+            type: String,
+            enum: ['CASH', 'NEFT', 'UPI', 'IMPS', 'PRIMARY BANK', 'SECONDARY BANK'],
+            default: 'CASH'
+        },
+        paymentAccount: { type: String, default: '' },
+        remarks: { type: String, default: '' }
+    },
+
+    // Driver Balance Tracking (Total amount owed by the driver back to the company, usually HL + Commission)
+    driverBalanceStatus: {
+        type: String,
+        enum: ['PENDING', 'PARTIALLY_COLLECTED', 'COLLECTED'],
+        default: 'PENDING'
+    },
+    driverBalanceCollectedAmount: { type: Number, default: 0 },
+    driverBalanceCollectedDate: { type: Date },
+    driverBalancePendingAmount: { type: Number, default: 0 },
 
     // Ad-hoc Vehicle Details (Snapshot)
     vehicleNumber: String,

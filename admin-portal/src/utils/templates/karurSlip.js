@@ -150,7 +150,9 @@ export const karurSlipLayout = (tripOrTrips, preferences = null) => {
         const totalHire = trip.driverTotalPayable || 0;
         const commission = trip.driverLoadingCommission || 0;
         const loading = trip.loadingCharge || 0;
-        const otherExpenses = trip.driverOtherExpenses || 0;
+        const otherExpenses = (trip.driverOtherExpensesDetails && Array.isArray(trip.driverOtherExpensesDetails))
+            ? trip.driverOtherExpensesDetails.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0)
+            : (trip.driverOtherExpenses || 0);
 
         const grossTotal = totalHire - (commission + loading + otherExpenses);
         const advance = trip.driverAdvance || 0;
@@ -179,6 +181,27 @@ export const karurSlipLayout = (tripOrTrips, preferences = null) => {
         doc.text("Other Expenses", margin, currentY);
         doc.text(`: Rs ${otherExpenses.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
         currentY += 6;
+
+        // Billing deductions (if present on this trip record)
+        const bLoadingMamul = trip.loadingMamul || 0;
+        const bUnloadingMamul = trip.consignorUnloadingMamul || 0;
+        const bPaymentMamul = trip.consignorPaymentMamul || 0;
+
+        if (bLoadingMamul > 0) {
+            doc.text("Loading Mamul", margin, currentY);
+            doc.text(`: -Rs ${bLoadingMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+        if (bUnloadingMamul > 0) {
+            doc.text("Unloading Mamul", margin, currentY);
+            doc.text(`: -Rs ${bUnloadingMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
+        if (bPaymentMamul > 0) {
+            doc.text("Payment Mamul", margin, currentY);
+            doc.text(`: -Rs ${bPaymentMamul.toFixed(2)}`, rightColAlign, currentY, { align: 'right' });
+            currentY += 6;
+        }
 
         drawLine(); // ---
 

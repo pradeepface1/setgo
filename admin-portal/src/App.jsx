@@ -11,6 +11,9 @@ import Trips from './pages/Trips';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
+import Logistics from './pages/Logistics'; // NEW
+import Consignors from './pages/Consignors'; // NEW
+import Rosters from './pages/Rosters'; // NEW
 import Login from './pages/Login';
 import Organizations from './pages/Organizations';
 
@@ -31,6 +34,9 @@ function App() {
                 <Route path="trips" element={<Trips />} />
                 <Route path="drivers" element={<Drivers />} />
                 <Route path="users" element={<Users />} />
+                <Route path="logistics" element={<Logistics />} /> {/* NEW */}
+                <Route path="consignors" element={<Consignors />} /> {/* NEW */}
+                <Route path="rosters" element={<Rosters />} /> {/* NEW */}
                 <Route path="reports" element={<Reports />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="organizations" element={<Organizations />} />

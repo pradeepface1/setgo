@@ -41,7 +41,7 @@ const LogisticsTripForm = ({ onClose, onTripCreated }) => {
             try {
                 const [consignorData, driverData] = await Promise.all([
                     consignorService.getAll({ limit: 100 }), // Fetch active consignors
-                    tripService.getDrivers({ vertical: 'LOGISTICS', status: 'ONLINE' }) // Fetch available drivers
+                    tripService.getDrivers({ vertical: 'LOGISTICS' }) // Fetch all drivers to allow smart assignment
                 ]);
                 setConsignors(consignorData.consignors || consignorData);
                 setDrivers(driverData);
@@ -76,6 +76,15 @@ const LogisticsTripForm = ({ onClose, onTripCreated }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (formData.assignedDriverId) {
+            const selectedDriver = drivers.find(d => d._id === formData.assignedDriverId);
+            if (selectedDriver && selectedDriver.status === 'OFFLINE') {
+                const proceed = window.confirm(`Road Pilot ${selectedDriver.name} is currently OFFLINE. Do you want to force them ONLINE and assign this trip?`);
+                if (!proceed) return;
+            }
+        }
+
         setLoading(true);
         setError(null);
 

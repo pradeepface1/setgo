@@ -59,102 +59,165 @@ function TripCompletionModal({ trip, onClose, onComplete }) {
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
-                <div className="modal-header">
-                    <h3>Complete Trip Details</h3>
-                    <button onClick={onClose} className="close-button">×</button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm overflow-y-auto h-full w-full flex items-center justify-center z-[9999]" onClick={onClose}>
+            <div
+                className="relative rounded-3xl shadow-2xl w-full max-w-md mx-4 border transition-colors duration-500 overflow-hidden"
+                style={{ backgroundColor: 'var(--theme-bg-sidebar)', borderColor: 'rgba(255,255,255,0.05)' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                    <h3 className="text-xl font-bold tracking-tight" style={{ color: 'var(--theme-text-main)' }}>Complete Trip Details</h3>
+                    <button onClick={onClose} className="opacity-50 hover:opacity-100 transition-opacity text-2xl font-light" style={{ color: 'var(--theme-text-main)' }}>×</button>
                 </div>
 
-                <div className="trip-summary">
-                    <p><strong>Customer:</strong> {trip.customerName}</p>
-                    <p><strong>Route:</strong> {trip.pickupLocation} → {trip.dropLocation}</p>
+                <div className="p-6">
+                    <div className="mb-6 p-4 rounded-xl text-sm border shadow-sm transition-colors duration-500"
+                        style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                        <p className="mb-1" style={{ color: 'var(--theme-text-muted)' }}>
+                            <strong style={{ color: 'var(--theme-text-main)' }}>Customer:</strong> {trip.customerName}
+                        </p>
+                        <p style={{ color: 'var(--theme-text-muted)' }}>
+                            <strong style={{ color: 'var(--theme-text-main)' }}>Route:</strong> {trip.pickupLocation} → {trip.dropLocation}
+                        </p>
+                    </div>
+
+                    {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Total KMS *</label>
+                                <input
+                                    type="text"
+                                    name="totalKm"
+                                    value={formData.totalKm}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 150.5"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Total Hours *</label>
+                                <input
+                                    type="text"
+                                    name="totalHours"
+                                    value={formData.totalHours}
+                                    onChange={handleChange}
+                                    placeholder="e.g. 8.5"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 py-2">
+                            <div className="h-px flex-1 bg-white/5"></div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-30 px-2" style={{ color: 'var(--theme-text-main)' }}>Optional Details</span>
+                            <div className="h-px flex-1 bg-white/5"></div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Toll / Parking</label>
+                                <input
+                                    type="text"
+                                    name="tollParking"
+                                    value={formData.tollParking}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Permit</label>
+                                <input
+                                    type="text"
+                                    name="permit"
+                                    value={formData.permit}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Extra KMS</label>
+                                <input
+                                    type="text"
+                                    name="extraKm"
+                                    value={formData.extraKm}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest px-1" style={{ color: 'var(--theme-text-muted)' }}>Extra Hours</label>
+                                <input
+                                    type="text"
+                                    name="extraHours"
+                                    value={formData.extraHours}
+                                    onChange={handleChange}
+                                    placeholder="0.00"
+                                    className="w-full px-4 py-2 rounded-xl transition-all duration-300 border focus:outline-none"
+                                    style={{
+                                        backgroundColor: 'var(--theme-bg-card)',
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        color: 'var(--theme-text-main)'
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-4 flex gap-4">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 px-6 py-3 border rounded-xl text-sm font-bold transition-all hover:bg-white/5 active:scale-95"
+                                style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'var(--theme-text-main)' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className={`flex-[1.5] px-6 py-3 rounded-xl shadow-lg text-sm font-bold transition-all active:scale-95 hover:shadow-[0_0_20px_var(--theme-primary-glow)]`}
+                                style={{ backgroundColor: 'var(--theme-primary)', color: 'white' }}
+                            >
+                                {submitting ? 'Completing...' : 'Submit & Complete'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-
-                <form onSubmit={handleSubmit} className="completion-form">
-                    <div className="form-group compulsory">
-                        <label>Total KMS *</label>
-                        <input
-                            type="text"
-                            name="totalKm"
-                            value={formData.totalKm}
-                            onChange={handleChange}
-                            placeholder="e.g. 150.5"
-                            required
-                        />
-                    </div>
-
-                    <div className="form-group compulsory">
-                        <label>Total Hours *</label>
-                        <input
-                            type="text"
-                            name="totalHours"
-                            value={formData.totalHours}
-                            onChange={handleChange}
-                            placeholder="e.g. 8.5"
-                            required
-                        />
-                    </div>
-
-                    <div className="separator">Optional Details</div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Toll / Parking</label>
-                            <input
-                                type="text"
-                                name="tollParking"
-                                value={formData.tollParking}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Permit</label>
-                            <input
-                                type="text"
-                                name="permit"
-                                value={formData.permit}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Extra KMS</label>
-                            <input
-                                type="text"
-                                name="extraKm"
-                                value={formData.extraKm}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Extra Hours</label>
-                            <input
-                                type="text"
-                                name="extraHours"
-                                value={formData.extraHours}
-                                onChange={handleChange}
-                                placeholder="0.00"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="cancel-btn">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={submitting} className="submit-btn">
-                            {submitting ? 'Completing...' : 'Submit & Complete'}
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     );

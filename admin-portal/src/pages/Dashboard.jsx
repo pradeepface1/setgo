@@ -1,32 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { RefreshCw, Plus } from 'lucide-react';
 import TripList from '../components/trips/TripList';
+import AvailableLorryList from '../components/trips/AvailableLorryList';
+import MapLibreDriverMap from '../components/dashboard/MapLibreDriverMap';
 import { tripService } from '../services/api';
 import { useSocket } from '../context/SocketContext';
 import { useSettings } from '../context/SettingsContext';
-
-// Fix for default marker icon
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import LogisticsTripForm from '../components/logistics/LogisticsTripForm';
 
 const Dashboard = () => {
     const [stats, setStats] = useState({ total: 0, online: 0, busy: 0, offline: 0 });
     const [driverLocations, setDriverLocations] = useState({}); // Map of driverId -> location data
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const socket = useSocket();
     const { t } = useTranslation();
     const { currentVertical } = useSettings(); // Get current vertical
+
+    const handleTripCreated = () => {
+        setRefreshTrigger(prev => prev + 1);
+        setShowCreateModal(false);
+        fetchStats();
+    };
+
+    const handleSaveLorryDraft = async (payload) => {
+        try {
+            await tripService.createTrip({ ...payload, vertical: 'LOGISTICS' });
+            handleTripCreated();
+        } catch (error) {
+            console.error('Error saving lorry draft', error);
+            alert('Failed to save Lorry Draft. Please check the console.');
+        }
+    };
 
     const fetchStats = async () => {
         try {
@@ -121,10 +127,15 @@ const Dashboard = () => {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">{t('dashboard')}</h1>
+                <h1 className="text-2xl font-semibold transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>{t('dashboard')}</h1>
                 <button
                     onClick={handleRefresh}
-                    className="p-2 text-gray-500 hover:text-gray-700 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="p-2 transition-colors duration-300 rounded-full shadow-lg border backdrop-blur-sm"
+                    style={{
+                        backgroundColor: 'var(--theme-bg-sidebar)',
+                        color: 'var(--theme-text-main)',
+                        borderColor: 'rgba(255,255,255,0.1)'
+                    }}
                     title={t('refresh_dashboard')}
                 >
                     <RefreshCw className="h-5 w-5" />
@@ -132,60 +143,88 @@ const Dashboard = () => {
             </div>
 
             {/* Map Section */}
-            <div className="h-96 w-full rounded-lg overflow-hidden shadow-lg border border-gray-200 z-0">
-                <MapContainer center={defaultCenter} zoom={12} style={{ height: '100%', width: '100%' }}>
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-
-                    {Object.values(driverLocations)
-                        .filter(driver => driver.status !== 'OFFLINE')
-                        .map(driver => (
-                            <Marker key={driver.driverId} position={[driver.lat, driver.lng]}>
-                                <Tooltip direction="top" offset={[0, -40]} opacity={1} permanent>
-                                    <span className="font-bold text-sm">{driver.name || 'Driver'}</span>
-                                </Tooltip>
-                                <Popup>
-                                    <div className="font-semibold">{driver.name || 'Unknown Driver'}</div>
-                                    <div className="text-xs">Status: {driver.status || 'Unknown'}</div>
-                                    <div className="text-xs">Speed: {driver.speed ? Math.round(driver.speed * 3.6) : 0} km/h</div>
-                                </Popup>
-                            </Marker>
-                        ))}
-                </MapContainer>
-            </div>
+            <MapLibreDriverMap
+                drivers={Object.values(driverLocations).filter(d => d.status !== 'OFFLINE')}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-6">
-                    <TripList
-                        onTripUpdated={fetchStats}
-                        statusFilter="PENDING"
-                        title={t('pending_trips')}
-                        refreshTrigger={refreshTrigger}
-                    />
+                    <div className="flex items-center justify-between mt-2 mb-4 px-2">
+                        <h2 className="text-xl font-bold transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>Vehicle Availability</h2>
+                        {currentVertical === 'LOGISTICS' && (
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Quick Add Lorry (Draft)
+                            </button>
+                        )}
+                    </div>
+                    {currentVertical === 'LOGISTICS' && (
+                        <AvailableLorryList
+                            refreshTrigger={refreshTrigger}
+                            onTripUpdated={fetchStats}
+                            onQuickAdd={() => setShowCreateModal(true)}
+                        />
+                    )}
+                    {currentVertical !== 'LOGISTICS' && (
+                        <TripList
+                            onTripUpdated={fetchStats}
+                            statusFilter="PENDING"
+                            title={t('pending_trips')}
+                            refreshTrigger={refreshTrigger}
+                        />
+                    )}
                 </div>
 
                 {/* Sidebar / Stats Area */}
                 <div className="space-y-6">
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('live_status')}</h3>
+                    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/20 dark:border-slate-800/50 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[50px] -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all duration-700" />
+
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                            <span className="h-5 w-1.5 bg-indigo-600 rounded-full" />
+                            {t('live_status')}
+                        </h3>
 
                         <div className="space-y-4">
+                            <Link to="/drivers?status=ONLINE" className="flex justify-between items-center p-4 bg-emerald-50/50 dark:bg-emerald-900/10 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-300 cursor-pointer rounded-2xl border border-emerald-100/50 dark:border-emerald-500/10 group/item">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover/item:scale-110 transition-transform">
+                                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
+                                    </div>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{t('online_drivers')}</span>
+                                </div>
+                                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{stats.online}</span>
+                            </Link>
 
-                            <Link to="/drivers?status=ONLINE" className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded px-2 -mx-2">
-                                <span className="text-gray-600 dark:text-gray-300">{t('online_drivers')}</span>
-                                <span className="text-xl font-bold text-green-600">{stats.online}</span>
+                            <Link to="/drivers?status=BUSY" className="flex justify-between items-center p-4 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all duration-300 cursor-pointer rounded-2xl border border-amber-100/50 dark:border-amber-500/10 group/item">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover/item:scale-110 transition-transform">
+                                        <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+                                    </div>
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{t('busy_drivers')}</span>
+                                </div>
+                                <span className="text-3xl font-black text-amber-600 dark:text-amber-400 tabular-nums">{stats.busy}</span>
                             </Link>
-                            <Link to="/drivers?status=BUSY" className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer rounded px-2 -mx-2">
-                                <span className="text-gray-600 dark:text-gray-300">{t('busy_drivers')}</span>
-                                <span className="text-xl font-bold text-orange-500">{stats.busy}</span>
-                            </Link>
+
+                            <div className="pt-4 flex items-center justify-between text-slate-400 dark:text-slate-500 px-2 mt-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest">{t('total_fleet')}</span>
+                                <span className="text-sm font-bold">{stats.total} Assets</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {showCreateModal && currentVertical === 'LOGISTICS' && (
+                <LogisticsTripForm
+                    onSave={handleSaveLorryDraft}
+                    onCancel={() => setShowCreateModal(false)}
+                    isQuickAdd={true} // Add Prop to indicate Draft/Quick mode
+                />
+            )}
         </div>
     );
 };

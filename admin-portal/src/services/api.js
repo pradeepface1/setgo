@@ -150,6 +150,15 @@ export const tripService = {
         return handleResponse(response);
     },
 
+    bulkCreateDriver: async (driversData) => {
+        const response = await fetch(`${API_URL}/drivers/bulk`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ drivers: driversData }),
+        });
+        return handleResponse(response);
+    },
+
     deleteDriver: async (driverId) => {
         const response = await fetch(`${API_URL}/drivers/${driverId}`, {
             method: 'DELETE',
@@ -259,9 +268,86 @@ export const tripService = {
         return handleResponse(response);
     },
 
+    getMilestones: async (params) => {
+        let query = '';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.vertical) queryParams.append('vertical', params.vertical);
+            if (params.startDate) queryParams.append('startDate', params.startDate);
+            if (params.endDate) queryParams.append('endDate', params.endDate);
+            if (params.organizationId) queryParams.append('organizationId', params.organizationId);
+            if (params.consignorId) queryParams.append('consignorId', params.consignorId);
+            if (params.driverId) queryParams.append('driverId', params.driverId);
+            query = `?${queryParams.toString()}`;
+        }
+        const response = await fetch(`${API_URL}/trips/milestones${query}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    getMilestoneDetails: async (params) => {
+        let query = '';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.vertical) queryParams.append('vertical', params.vertical);
+            if (params.startDate) queryParams.append('startDate', params.startDate);
+            if (params.endDate) queryParams.append('endDate', params.endDate);
+            if (params.organizationId) queryParams.append('organizationId', params.organizationId);
+            if (params.consignorId) queryParams.append('consignorId', params.consignorId);
+            if (params.driverId) queryParams.append('driverId', params.driverId);
+            if (params.milestone) queryParams.append('milestone', params.milestone);
+            query = `?${queryParams.toString()}`;
+        }
+        const response = await fetch(`${API_URL}/trips/milestones/details${query}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+
     getReports: async () => {
         const response = await fetch(`${API_URL}/trips/reports`, {
             headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    // Hand Loans
+    createHandLoan: async (loanData) => {
+        const response = await fetch(`${API_URL}/hand-loans`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(loanData),
+        });
+        return handleResponse(response);
+    },
+
+    getHandLoans: async (params) => {
+        let query = '';
+        if (params) {
+            const queryParams = new URLSearchParams();
+            if (params.driverId) queryParams.append('driverId', params.driverId);
+            if (params.status) queryParams.append('status', params.status);
+            query = `?${queryParams.toString()}`;
+        }
+        const response = await fetch(`${API_URL}/hand-loans${query}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    getHandLoanBalance: async (driverId) => {
+        const response = await fetch(`${API_URL}/hand-loans/pending-balance/${driverId}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+
+    recoverHandLoan: async (id, data) => {
+        const response = await fetch(`${API_URL}/hand-loans/${id}/recover`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
         });
         return handleResponse(response);
     }
@@ -323,31 +409,33 @@ export const organizationService = {
             headers: getAuthHeaders()
         });
         return handleResponse(response);
+    },
+
+    uploadLogo: async (id, file) => {
+        const formData = new FormData();
+        formData.append('logo', file);
+        // Don't set Content-Type manually — browser sets it with correct boundary for multipart
+
+        let token = null;
+        const userStr = localStorage.getItem('adminUser');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                token = user.token;
+            } catch (e) {
+                console.error('Error parsing user token for upload', e);
+            }
+        }
+
+        const response = await fetch(`${API_URL}/organizations/${id}/logo`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData
+        });
+        return handleResponse(response);
     }
 };
 
-export const sosService = {
-    getStats: async () => {
-        const response = await fetch(`${API_URL}/sos/stats`, {
-            headers: getAuthHeaders()
-        });
-        return handleResponse(response);
-    },
-    getAll: async () => {
-        const response = await fetch(`${API_URL}/sos`, {
-            headers: getAuthHeaders()
-        });
-        return handleResponse(response);
-    },
-    resolve: async (id, adminId) => {
-        const response = await fetch(`${API_URL}/sos/${id}/resolve`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ resolvedBy: adminId || 'admin' })
-        });
-        return handleResponse(response);
-    }
-};
 
 export const consignorService = {
     getAll: async (params) => {
@@ -369,6 +457,14 @@ export const consignorService = {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    bulkCreate: async (dataArray) => {
+        const response = await fetch(`${API_URL}/consignors/bulk`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ consignors: dataArray })
         });
         return handleResponse(response);
     },
@@ -407,6 +503,18 @@ export const reportsService = {
             headers: getAuthHeaders()
         });
         return handleResponse(response);
+    },
+    getAnalytical: async (params) => {
+        const response = await fetch(`${API_URL}/reports/analytical?${new URLSearchParams(params)}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    getHandLoans: async (params) => {
+        const response = await fetch(`${API_URL}/reports/handloans?${new URLSearchParams(params)}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
     }
 };
 
@@ -416,6 +524,65 @@ export const aiService = {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify({ prompt, context })
+        });
+        return handleResponse(response);
+    }
+};
+
+export const rosterService = {
+    getShifts: async () => {
+        const response = await fetch(`${API_URL}/rosters/shifts`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    createShift: async (shiftData) => {
+        const response = await fetch(`${API_URL}/rosters/shifts`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(shiftData)
+        });
+        return handleResponse(response);
+    },
+    deleteShift: async (id) => {
+        const response = await fetch(`${API_URL}/rosters/shifts/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    getRosters: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.driverId) queryParams.append('driverId', params.driverId);
+
+        const response = await fetch(`${API_URL}/rosters?${queryParams.toString()}`, {
+            headers: getAuthHeaders()
+        });
+        return handleResponse(response);
+    },
+    createRoster: async (data) => {
+        const response = await fetch(`${API_URL}/rosters`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    bulkCreateRosters: async (assignments) => {
+        const response = await fetch(`${API_URL}/rosters/bulk`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ assignments })
+        });
+        return handleResponse(response);
+    },
+    updateRoster: async (id, data) => {
+        const response = await fetch(`${API_URL}/rosters/${id}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(data)
         });
         return handleResponse(response);
     }

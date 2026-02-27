@@ -1,62 +1,34 @@
-# SetGo OnCall - Multi-Tenant Transportation Platform
+# SetGo OnCall - Project Overview
 
-This project consists of four main components:
+## 📱 Mobile App Development Protocol (STRICT)
 
-1.  **Backend API**: Node.js/Express server with MongoDB.
-2.  **Admin Portal**: React Admin Dashboard for Org/Super Admins.
-3.  **Driver App**: Mobile-first Web App for Drivers.
-4.  **Commuter App**: Mobile-first Web App for Employees/Commuters.
+**WARNING:** Do NOT edit the code in `roadpilot_mobile`, `setgo_driver`, or `setgo_commuter` directly.
 
-## Prerequisites
+### 1. Local-First Workflow
+We maintain separate folders for **Local (Dev)** and **Staging (Cloud)** environments to prevent configuration accidents.
 
--   Node.js (v18+)
--   MongoDB (Running locally on default port 27017)
+-   **Local Folders (`*_local`)**: Use these for ALL development and testing. They are hardcoded to point to `http://10.0.2.2:5001/api`.
+-   **Staging Folders (Original)**: These are for Staging/Production builds ONLY. They point to the Cloud Backend.
 
-## How to Run
+### 2. How to Make Changes
+1.  **Edit Code** in the `_local` folder (e.g., `roadpilot_mobile_local`).
+2.  **Test** using the script: `./mobile_manager.sh roadpilot local run`.
+3.  **Promote** using the script: `./promote_to_staging.sh roadpilot`.
+    *   *This script safely copies your code to the staging folder while preserving the staging API configuration.*
+4.  **Build Staging** using: `./mobile_manager.sh roadpilot staging build`.
 
-You need to run each component in a separate terminal window.
+### 3. Helper Scripts
+-   `./mobile_manager.sh`: Unified command to run or build any app in any environment.
+-   `./promote_to_staging.sh`: Automates the sync from Local -> Staging.
 
-### 1. Backend Server
-```bash
-cd backend
-npm install
-npm start
-```
-*Port: 5001*
+---
 
-### 2. Admin Portal
-```bash
-cd admin-portal
-npm install
-npm run dev
-```
-*Port: 5173 (http://localhost:5173)*
-
-### 3. Commuter App
-```bash
-cd commuter-app
-npm install
-npm run dev
-```
-*Port: 5174 (http://localhost:5174)*
-
-### 4. Driver App
-```bash
-cd driver-app
-npm install
-npm run dev
-```
-*Port: 5175 (http://localhost:5175)*
-
-## Features
-
--   **Super Admin**: Manage multiple Organizations.
--   **Org Admin**: Manage Drivers, Trips, and Users for a specific Organization.
--   **Driver Trip Flow**: Accept, Start (OTP), and Complete trips (with image upload).
--   **Commuter App**: View assigned trips and history.
-
-## Environment Variables
-
-Ensure each folder has its `.env` file configured.
--   **Backend**: `MONGO_URI`, `JWT_SECRET`, `PORT=5001`
--   **Frontend Apps**: `VITE_API_URL=http://localhost:5001/api`
+## 📂 Directory Structure
+-   `admin-portal/`: React Admin Dashboard
+-   `backend/`: Node.js/Express Backend
+-   `roadpilot_mobile/`: Roadpilot App (STAGING)
+-   `roadpilot_mobile_local/`: Roadpilot App (LOCAL DEV)
+-   `setgo_driver/`: Driver App (STAGING)
+-   `setgo_driver_local/`: Driver App (LOCAL DEV)
+-   `setgo_commuter/`: Commuter App (STAGING)
+-   `setgo_commuter_local/`: Commuter App (LOCAL DEV)

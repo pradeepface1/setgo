@@ -17,7 +17,7 @@ const Trips = () => {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold text-gray-900">Trips</h1>
+                <h1 className="text-2xl font-semibold transition-colors duration-500" style={{ color: 'var(--theme-text-main)' }}>Trips</h1>
 
                 {/* Only show Create button for Logistics for now, or if needed for Taxi */}
                 {currentVertical === 'LOGISTICS' && (
@@ -31,7 +31,13 @@ const Trips = () => {
                 )}
             </div>
 
-            <div className="bg-white shadow rounded-lg p-6">
+            <div
+                className="shadow rounded-xl p-6 transition-colors duration-500 border"
+                style={{
+                    backgroundColor: 'var(--theme-bg-card)',
+                    borderColor: 'rgba(255,255,255,0.05)'
+                }}
+            >
                 <TripList
                     statusFilter={['ASSIGNED', 'ACCEPTED', 'STARTED', 'COMPLETED', 'CANCELLED', 'LOADING', 'IN_TRANSIT', 'UNLOADED', 'PAYMENT_PENDING']}
                     title="All Trips"

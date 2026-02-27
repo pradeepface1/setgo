@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
     const { user } = useAuth();
     const [organizations, setOrganizations] = useState([]);
+    const [customCategory, setCustomCategory] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -13,7 +14,7 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
         password: '', // Default password
         vehicleModel: '',
         vehicleNumber: '',
-        vehicleCategory: vertical === 'LOGISTICS' ? 'LCV' : 'Sedan Regular',
+        vehicleCategory: vertical === 'LOGISTICS' ? '10 wheeler' : 'Sedan Regular',
         status: 'OFFLINE',
         rating: 5.0,
         organizationId: '', // For Super Admin
@@ -24,15 +25,18 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
         ownerPhone: '',
         ownerHometown: '',
         panNumber: '',
+        panCardName: '',
         accountName: '',
         bankName: '',
         upiNumber: '',
         accountNumber: '',
         ifsc: '',
-        // Compliance
-        fcStatus: '',
-        insuranceExpiry: '',
-        taxExpiry: ''
+        secondaryAccountName: '',
+        secondaryBankName: '',
+        secondaryAccountNumber: '',
+        secondaryIfsc: '',
+        secondaryUpiNumber: '',
+        dtsDocument: null
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -41,11 +45,11 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
         'Sedan Regular', 'Sedan Premium', 'Sedan Premium+',
         'SUV Regular', 'SUV Premium',
         'Tempo Traveller', 'Force Premium',
-        'Bus', 'High-End Coach'
+        'Bus', 'High-End Coach', 'Others'
     ];
 
     const logisticsVehicleCategories = [
-        'LCV', 'MCV', 'HCV', 'Container', 'Trailer'
+        '10 wheeler', '12 wheeler', '14 wheeler', '16 wheeler', '20ft Container', '32ft Container', 'Others'
     ];
 
     const vehicleCategories = vertical === 'LOGISTICS' ? logisticsVehicleCategories : taxiVehicleCategories;
@@ -63,17 +67,26 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
     };
 
     const logisticsVehicleModels = {
-        'LCV': ['Tata Ace', 'Bolero Pickup', 'Ashok Leyland Dost'],
-        'MCV': ['Eicher Pro 2049', 'Tata 709', 'Eicher 19ft'],
-        'HCV': ['Tata 1613', 'Eicher Pro 3015', 'Ashok Leyland Boss', '10 Wheeler', '12 Wheeler', '16 Wheeler'],
-        'Container': ['32ft Single Axle', '32ft Multi Axle', '20ft Container'],
-        'Trailer': ['Flat Bed 40ft', 'Low Bed', 'Semi Low Bed']
+        '10 wheeler': [''],
+        '12 wheeler': [''],
+        '14 wheeler': [''],
+        '16 wheeler': [''],
+        '20ft Container': [''],
+        '32ft Container': ['']
     };
 
     const vehicleModels = vertical === 'LOGISTICS' ? logisticsVehicleModels : taxiVehicleModels;
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, files } = e.target;
+
+        if (type === 'file') {
+            setFormData(prev => ({
+                ...prev,
+                [name]: files[0]
+            }));
+            return;
+        }
 
         if (name === 'vehicleCategory') {
             setFormData(prev => ({
@@ -128,6 +141,10 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
         try {
             // Prepare payload
             const payload = { ...formData };
+            if (payload.vehicleCategory === 'Others') {
+                payload.vehicleCategory = customCategory || 'Others';
+                payload.vehicleModel = ''; // Model shouldn't be asked for "Others"
+            }
 
             // For Logistics, structure the bank details object and handle missing required fields for Taxi
             if (vertical === 'LOGISTICS') {
@@ -139,19 +156,35 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
                     upiNumber: formData.upiNumber
                 };
 
-                // Add Compliance Dates
-                if (formData.fcStatus) payload.fcStatus = formData.fcStatus;
-                if (formData.insuranceExpiry) payload.insuranceExpiry = formData.insuranceExpiry;
-                if (formData.taxExpiry) payload.taxExpiry = formData.taxExpiry;
-                if (formData.taxExpiry) payload.taxExpiry = formData.taxExpiry;
+                payload.secondaryBankDetails = {
+                    accountName: formData.secondaryAccountName,
+                    bankName: formData.secondaryBankName,
+                    accountNumber: formData.secondaryAccountNumber,
+                    ifsc: formData.secondaryIfsc,
+                    upiNumber: formData.secondaryUpiNumber
+                };
 
-                // Add Compliance Dates
-                if (formData.fcStatus) payload.fcStatus = formData.fcStatus;
-                if (formData.insuranceExpiry) payload.insuranceExpiry = formData.insuranceExpiry;
-                if (formData.taxExpiry) payload.taxExpiry = formData.taxExpiry;
+                // Remove the flat fields
+                delete payload.accountName;
+                delete payload.bankName;
+                delete payload.accountNumber;
+                delete payload.ifsc;
+                delete payload.upiNumber;
+                delete payload.secondaryAccountName;
+                delete payload.secondaryBankName;
+                delete payload.secondaryAccountNumber;
+                delete payload.secondaryIfsc;
+                delete payload.secondaryUpiNumber;
 
                 // Set defaults for Taxi-required fields that are hidden
                 payload.password = payload.password || 'LogisticsDefault123'; // Backend default
+            }
+
+            // Prepare for FormData if there's a file, but since api.createDriver uses JSON stringify, we check if there's a file
+            if (formData.dtsDocument instanceof File) {
+                // Here we would normally upload the file to GCS first, and get the URL back.
+                // For now, simulating the URL until the upload backend is wired up.
+                payload.dtsDocument = `https://storage.googleapis.com/setgo-dts/${formData.dtsDocument.name}`;
             }
 
             await tripService.createDriver(payload);
@@ -166,9 +199,9 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
 
     return (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-start justify-center pt-24 pb-12 z-50">
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="relative theme-modal rounded-lg shadow-xl w-full max-w-md mx-4">
                 <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="text-xl font-semibold text-gray-900">
+                    <h3 className="text-xl font-semibold">
                         {vertical === 'LOGISTICS' ? 'Add New Road Pilot' : 'Add New Driver'}
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
@@ -300,11 +333,29 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
                                             <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
                                             <input type="text" name="panNumber" value={formData.panNumber} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2 uppercase" />
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">PAN Card Holder Name</label>
+                                            <input type="text" name="panCardName" value={formData.panCardName} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2 uppercase" />
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="border-t border-gray-200 pt-4 mt-2">
-                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Bank Details (Optional)</h4>
+                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">DTS Document Upload</h4>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="block text-sm font-medium text-gray-700">DTS Document (Image/PDF)</label>
+                                        <input
+                                            type="file"
+                                            name="dtsDocument"
+                                            accept="image/*,.pdf"
+                                            onChange={handleChange}
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-jubilant-50 file:text-jubilant-700 hover:file:bg-jubilant-100"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-gray-200 pt-4 mt-2">
+                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Primary Bank Details</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
@@ -329,27 +380,34 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
                                     </div>
                                 </div>
 
-                                <div className="border-t border-gray-200 pt-4 mt-2">
-                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Vehicle Documents (Expiry)</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="border-t border-gray-200 pt-4 mt-4">
+                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Secondary Bank Details (Optional)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">FC Expiry</label>
-                                            <input type="date" name="fcStatus" value={formData.fcStatus} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+                                            <input type="text" name="secondaryAccountName" value={formData.secondaryAccountName} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Insurance Expiry</label>
-                                            <input type="date" name="insuranceExpiry" value={formData.insuranceExpiry} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                                            <input type="text" name="secondaryBankName" value={formData.secondaryBankName} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Tax Expiry</label>
-                                            <input type="date" name="taxExpiry" value={formData.taxExpiry} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
+                                            <input type="text" name="secondaryAccountNumber" value={formData.secondaryAccountNumber} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                                            <input type="text" name="secondaryIfsc" value={formData.secondaryIfsc} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2 uppercase" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">UPI Number</label>
+                                            <input type="text" name="secondaryUpiNumber" value={formData.secondaryUpiNumber} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" />
                                         </div>
                                     </div>
                                 </div>
                             </>
                         )}
 
-                        {/* Vehicle Category/Model */}
                         <div className="mt-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Vehicle Category *
@@ -367,22 +425,40 @@ const AddDriverModal = ({ onClose, onDriverAdded, vertical = 'TAXI' }) => {
                             </select>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Vehicle Model *
-                            </label>
-                            <select
-                                name="vehicleModel"
-                                value={formData.vehicleModel}
-                                onChange={handleChange}
-                                required
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
-                            >
-                                {vehicleModels[formData.vehicleCategory]?.map(model => (
-                                    <option key={model} value={model}>{model}</option>
-                                )) || <option value="">Select Category First</option>}
-                            </select>
-                        </div>
+                        {formData.vehicleCategory === 'Others' && (
+                            <div className="mt-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Custom Category Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={customCategory}
+                                    onChange={(e) => setCustomCategory(e.target.value)}
+                                    required
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
+                                    placeholder="e.g., Tractor Trailer"
+                                />
+                            </div>
+                        )}
+
+                        {formData.vehicleCategory !== 'Others' && vertical !== 'LOGISTICS' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Vehicle Model *
+                                </label>
+                                <select
+                                    name="vehicleModel"
+                                    value={formData.vehicleModel}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-jubilant-500"
+                                >
+                                    {vehicleModels[formData.vehicleCategory]?.map(model => (
+                                        <option key={model} value={model}>{model}</option>
+                                    )) || <option value="">Select Category First</option>}
+                                </select>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

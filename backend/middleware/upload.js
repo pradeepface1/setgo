@@ -1,19 +1,23 @@
 const multer = require('multer');
 const path = require('path');
 
-// Configure storage
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        // Generate unique filename: tripId-timestamp.ext
-        // We might not have tripId easily in filename callback if it's a param, 
-        // but let's just use timestamp-random
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
+// Configure storage based on environment
+// For local development (or when not explicitly in production), use local disk
+// For Cloud Run production, use memory storage because local files are destroyed on container restarts
+let storage;
+if (process.env.NODE_ENV === 'production') {
+    storage = multer.memoryStorage();
+} else {
+    storage = multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, 'uploads/');
+        },
+        filename: function (req, file, cb) {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+        }
+    });
+}
 
 // File filter (JPEG only as requested, but maybe allow PNG too for flexibility)
 const fileFilter = (req, file, cb) => {

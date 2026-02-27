@@ -70,7 +70,7 @@ const mongoose = require('mongoose');
 
 // Add organization filter for Org Admins
 const filterByOrganization = (req, res, next) => {
-    if (req.user.role === 'ORG_ADMIN') {
+    if (req.user.role === 'ORG_ADMIN' || req.user.role === 'LOGISTICS_ADMIN') {
         // Org Admin can only see their organization's data
         // Handle case where organizationId is populated
         const orgId = req.user.organizationId && req.user.organizationId._id

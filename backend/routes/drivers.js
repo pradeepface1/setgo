@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Driver = require('../models/Driver');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const { authenticate, filterByOrganization } = require('../middleware/auth');
 
@@ -99,6 +100,183 @@ router.post('/', authenticate, async (req, res) => {
         res.status(201).json(driver);
     } catch (error) {
         res.status(400).json({ error: 'Creation failed', details: error.message });
+    }
+});
+
+// POST /api/drivers/bulk - Bulk create drivers
+router.post('/bulk', authenticate, filterByOrganization, async (req, res) => {
+    try {
+        const { drivers } = req.body;
+        const organizationId = req.organizationId; // Set by filterByOrganization middleware
+
+        if (!organizationId) {
+            return res.status(400).json({ error: 'Organization ID is required' });
+        }
+
+        let vertical = req.body.vertical || req.user.vertical || 'TAXI';
+        if (req.user.role === 'LOGISTICS_ADMIN') {
+            vertical = 'LOGISTICS';
+        } else if (req.user.role === 'TAXI_ADMIN') {
+            vertical = 'TAXI';
+        }
+
+        if (!Array.isArray(drivers) || drivers.length === 0) {
+            return res.status(400).json({ error: 'A valid array of drivers is required.' });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        const processedPhones = new Set();
+        const processedLorries = new Set();
+
+        // Ensure organizationId is treated as an ObjectId for accurate querying
+        const orgIdObj = (typeof organizationId === 'string' && mongoose.Types.ObjectId.isValid(organizationId))
+            ? new mongoose.Types.ObjectId(organizationId)
+            : organizationId;
+
+        for (let i = 0; i < drivers.length; i++) {
+            const row = drivers[i];
+
+            // Basic Info
+            const name = (row['DriverName (Compulsory)'] || row.name || row.Name || row.DriverName || '').toString().trim();
+            const phoneRaw = (row['MobileNumber (Compulsory)'] || row.phone || row.MobileNumber || '').toString().trim();
+            const lorryNumber = (row['LorryNumber (Compulsory)'] || row['VehicleNumber (Compulsory)'] || row.lorryNumber || row.LorryNumber || row.vehicleNumber || row.VehicleNumber || '').toString().trim();
+            const passwordStr = (row['Password (Compulsory)'] || row.password || row.Password || phoneRaw || 'pass123').toString().trim();
+            const vehicleCategory = (row['VehicleCategory (Compulsory)'] || row['Category (Compulsory)'] || row.category || row.Category || row.vehicleCategory || 'Others').toString().trim();
+            const vehicleModel = (row['VehicleModel (Compulsory)'] || row.vehicleModel || row.VehicleModel || '').toString().trim();
+            const statusRaw = (row['Status (Compulsory)'] || row.status || row.Status || 'OFFLINE').toString().trim();
+
+            if (!name || !phoneRaw || !lorryNumber) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Name, MobileNumber, and VehicleNumber are compulsory.`);
+                continue;
+            }
+
+            // Standardize phone to last 10 digits
+            const phone = phoneRaw.replace(/\D/g, '').slice(-10);
+            if (phone.length < 10) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Invalid mobile number "${phoneRaw}".`);
+                continue;
+            }
+
+            // Internal batch duplicate check
+            const lorryKey = lorryNumber.toUpperCase();
+            if (processedPhones.has(phone)) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Duplicate mobile "${phone}" found multiple times in this file.`);
+                continue;
+            }
+            if (processedLorries.has(lorryKey)) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Duplicate lorry "${lorryNumber}" found multiple times in this file.`);
+                continue;
+            }
+
+            // Status Normalization
+            let status = statusRaw.toUpperCase().replace(/\s+/g, '_');
+            if (status === 'ON_DUTY' || status === 'DUTY') status = 'ON_DUTY';
+            if (status === 'OFF_DUTY') status = 'OFF_DUTY';
+            if (status === 'ONLINE' || status === 'ON') status = 'ONLINE';
+            if (status === 'OFFLINE' || status === 'OFF') status = 'OFFLINE';
+            if (!['ONLINE', 'OFFLINE', 'BUSY', 'ON_DUTY', 'OFF_DUTY'].includes(status)) status = 'OFFLINE';
+
+            // Uniqueness validation (Database)
+            const vehicleExists = await Driver.findOne({
+                organizationId: orgIdObj,
+                $or: [
+                    { vehicleNumber: { $regex: new RegExp(`^${lorryNumber.trim()}$`, 'i') } },
+                    { lorryNumber: { $regex: new RegExp(`^${lorryNumber.trim()}$`, 'i') } }
+                ]
+            });
+
+            if (vehicleExists) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Lorry "${lorryNumber}" already exists in the system.`);
+                continue;
+            }
+
+            const phoneExists = await Driver.findOne({
+                organizationId: orgIdObj,
+                phone: { $regex: new RegExp(`${phone}$`) }
+            });
+
+            if (phoneExists) {
+                results.failed++;
+                results.errors.push(`Row ${i + 1}: Mobile number "${phone}" already registered.`);
+                continue;
+            }
+
+            // Logistics Specific
+            const lorryName = row['LorryName'] || row.lorryName || row.LorryName;
+            const ownerName = row['OwnerName'] || row.ownerName || row.OwnerName;
+            const ownerPhone = row['OwnerPhone'] || row.ownerPhone || row.OwnerPhone;
+            const ownerHometown = row['OwnerHometown'] || row.ownerHometown || row.OwnerHometown;
+            const panNumber = row['PANNumber'] || row.panNumber || row.PanNumber;
+            const panCardName = row['PANCardName'] || row.panCardName || row.PanCardName;
+
+            // Bank Details
+            const bankDetails = {
+                accountName: row['Bank_AccountName'] || row.accountName,
+                bankName: row['Bank_BankName'] || row.bankName,
+                accountNumber: row['Bank_AccountNumber'] || row.accountNumber,
+                ifsc: row['Bank_IFSC'] || row.ifsc,
+                upiNumber: row['Bank_UPINumber'] || row.upiNumber
+            };
+
+            const secondaryBankDetails = {
+                accountName: row['SecondaryBank_AccountName'] || row.secondaryAccountName,
+                bankName: row['SecondaryBank_BankName'] || row.secondaryBankName,
+                accountNumber: row['SecondaryBank_AccountNumber'] || row.secondaryAccountNumber,
+                ifsc: row['SecondaryBank_IFSC'] || row.secondaryIfsc,
+                upiNumber: row['SecondaryBank_UPINumber'] || row.secondaryUpiNumber
+            };
+
+            try {
+                const hashedPassword = await bcrypt.hash(passwordStr, 10);
+
+                const newDriver = new Driver({
+                    organizationId: orgIdObj,
+                    vertical,
+                    name: name,
+                    phone: phone,
+                    vehicleNumber: lorryNumber.trim(),
+                    lorryNumber: lorryNumber.trim(),
+                    lorryName: lorryName ? lorryName.toString().trim() : undefined,
+                    vehicleCategory: vehicleCategory,
+                    vehicleModel: vehicleModel,
+                    status: status,
+                    password: hashedPassword,
+                    ownerName: ownerName ? ownerName.toString().trim() : undefined,
+                    ownerPhone: ownerPhone ? ownerPhone.toString().trim() : undefined,
+                    ownerHometown: ownerHometown ? ownerHometown.toString().trim() : undefined,
+                    panNumber: panNumber ? panNumber.toString().trim().toUpperCase() : undefined,
+                    panCardName: panCardName ? panCardName.toString().trim().toUpperCase() : undefined,
+                    bankDetails,
+                    secondaryBankDetails
+                });
+                await newDriver.save();
+                results.success++;
+                processedPhones.add(phone);
+                processedLorries.add(lorryKey);
+            } catch (err) {
+                results.failed++;
+                if (err.code === 11000 || err.message.includes('E11000')) {
+                    results.errors.push(`Row ${i + 1}: Duplicate phone or lorry number detected.`);
+                } else {
+                    results.errors.push(`Row ${i + 1}: ${err.message}`);
+                }
+            }
+        }
+
+        res.status(200).json(results);
+
+    } catch (error) {
+        res.status(500).json({ error: 'Bulk creation failed', details: error.message });
     }
 });
 

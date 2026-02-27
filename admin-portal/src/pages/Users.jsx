@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, UserPlus, Clock, Shield, Edit, Trash2 } from 'lucide-react';
+import { User, UserPlus, Shield, Edit, Trash2 } from 'lucide-react';
 import CreateUserModal from '../components/users/CreateUserModal';
 import { tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -20,86 +20,107 @@ const Users = () => {
             setLoading(true);
             const data = await tripService.getUsers();
 
-            // Filter users based on vertical
-            // Since User model doesn't have vertical, we filter based on their organization's Vertical
-            // OR we filter based on the Role (e.g. TAXI_ADMIN vs LOGISTICS_ADMIN)
-
             const filteredData = data.filter(u => {
-                // Super Admins see everything (or we can filter them too if requested, but usually they see all)
-                // For now, let's filter based on organization vertical if available
-
-                // 1. If User has a specific vertical assigned (New Logic), use it for strict segregation
-                if (u.vertical) {
-                    return u.vertical === currentVertical;
-                }
-
-                // 2. Fallback: If user has organization, check its vertical (Legacy or Hybrid)
-                if (u.organizationId && u.organizationId.verticals && u.organizationId.verticals.length > 0) {
-                    return u.organizationId.verticals.includes(currentVertical);
-                }
-
-                // 3. If no org, check role
-                if (currentVertical === 'LOGISTICS') {
-                    return ['LOGISTICS_ADMIN', 'ROAD_PILOT'].includes(u.role);
-                } else {
-                    return ['TAXI_ADMIN', 'ORG_ADMIN', 'COMMUTER'].includes(u.role);
-                }
+                if (u.vertical) return u.vertical === currentVertical;
+                if (u.organizationId?.verticals?.length > 0) return u.organizationId.verticals.includes(currentVertical);
+                if (currentVertical === 'LOGISTICS') return ['LOGISTICS_ADMIN', 'ROAD_PILOT', 'LOGISTICS_STAFF'].includes(u.role);
+                return ['TAXI_ADMIN', 'ORG_ADMIN', 'COMMUTER'].includes(u.role);
             });
 
             setUsers(filteredData);
             setError(null);
         } catch (err) {
             setError(err.message || 'Failed to load users');
-            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchUsers();
-    }, [currentVertical]);
+    useEffect(() => { fetchUsers(); }, [currentVertical]);
 
-    const handleUserCreated = () => {
-        fetchUsers();
-        setUserToEdit(null);
-    };
-
-    const handleEdit = (user) => {
-        setUserToEdit(user);
-        setShowCreateModal(true);
-    };
+    const handleUserCreated = () => { fetchUsers(); setUserToEdit(null); };
+    const handleEdit = (user) => { setUserToEdit(user); setShowCreateModal(true); };
 
     const handleDelete = async (userId) => {
-        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            return;
-        }
-
+        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
         try {
-            // Optimistic update
             setUsers(users.filter(u => u._id !== userId));
             await tripService.deleteUser(userId);
-            // Re-fetch to be safe
             fetchUsers();
         } catch (err) {
             setError('Failed to delete user');
-            fetchUsers(); // Revert on error
+            fetchUsers();
         }
     };
 
+    const UserGroupCard = ({ title, accentColor, users: groupUsers }) => (
+        <div
+            className="rounded-2xl border overflow-hidden transition-colors duration-500"
+            style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)' }}
+        >
+            <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                <div className="w-1.5 h-5 rounded-full" style={{ backgroundColor: accentColor }}></div>
+                <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--theme-text-main)' }}>{title}</h3>
+                <span
+                    className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+                >
+                    {groupUsers.length}
+                </span>
+            </div>
+            {groupUsers.length === 0 ? (
+                <p className="p-5 text-xs opacity-50" style={{ color: 'var(--theme-text-muted)' }}>No users in this group.</p>
+            ) : (
+                <ul>
+                    {groupUsers.map(user => (
+                        <li
+                            key={user._id}
+                            className="px-5 py-3 flex justify-between items-center hover:bg-white/5 transition-colors border-b last:border-0"
+                            style={{ borderColor: 'rgba(255,255,255,0.03)' }}
+                        >
+                            <div>
+                                <div className="text-sm font-semibold" style={{ color: 'var(--theme-text-main)' }}>{user.username}</div>
+                                {user.organizationId && (
+                                    <div className="text-[10px] opacity-50 mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                                        {user.organizationId.displayName || user.organizationId.name}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => handleEdit(user)}
+                                    className="p-1.5 rounded-lg transition-colors hover:bg-sky-500/10"
+                                    style={{ color: '#38bdf8' }}
+                                >
+                                    <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(user._id)}
+                                    className="p-1.5 rounded-lg transition-colors hover:bg-rose-500/10"
+                                    style={{ color: '#f43f5e' }}
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">User Management</h1>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage admin access and roles</p>
+                    <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--theme-text-main)' }}>User Management</h1>
+                    <p className="mt-1 text-xs opacity-50" style={{ color: 'var(--theme-text-muted)' }}>Manage admin access and roles</p>
                 </div>
                 <button
-                    onClick={() => {
-                        setUserToEdit(null);
-                        setShowCreateModal(true);
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    onClick={() => { setUserToEdit(null); setShowCreateModal(true); }}
+                    className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                    style={{ backgroundColor: 'var(--theme-primary)', color: 'white' }}
                 >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add User
@@ -108,93 +129,58 @@ const Users = () => {
 
             <CreateUserModal
                 isOpen={showCreateModal}
-                onClose={() => {
-                    setShowCreateModal(false);
-                    setUserToEdit(null);
-                }}
+                onClose={() => { setShowCreateModal(false); setUserToEdit(null); }}
                 onUserCreated={handleUserCreated}
                 userToEdit={userToEdit}
             />
 
             {error && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4">
-                    <div className="flex">
-                        <div className="flex-shrink-0">
-                            <Shield className="h-5 w-5 text-red-400" />
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-red-700">{error}</p>
-                        </div>
-                    </div>
+                <div className="p-4 rounded-xl border-l-4 flex items-center gap-3"
+                    style={{ backgroundColor: 'rgba(244,63,94,0.08)', borderLeftColor: '#f43f5e' }}>
+                    <Shield className="h-5 w-5 flex-shrink-0" style={{ color: '#f43f5e' }} />
+                    <p className="text-sm" style={{ color: '#f43f5e' }}>{error}</p>
                 </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-                {loading ? (
-                    <div className="p-12 text-center text-gray-500 text-sm">Loading users...</div>
-                ) : users.length === 0 ? (
-                    <div className="p-12 text-center text-gray-500 text-sm">No users found. Create one to get started.</div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Commuters - Only visible in TAXI vertical */}
-                        {currentVertical === 'TAXI' && (
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <h3 className="text-lg font-medium mb-4 text-green-800">Commuters</h3>
-                                <ul className="divide-y divide-gray-200 bg-white rounded shadow">
-                                    {users.filter(u => u.role !== 'SUPER_ADMIN' && u.role !== 'ORG_ADMIN').map(user => (
-                                        <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
-                                            <div>
-                                                <div className="font-medium text-gray-900">{user.username}</div>
-                                                {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
-                                                <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
+            {loading ? (
+                <div
+                    className="p-12 text-center rounded-2xl border text-sm opacity-50"
+                    style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)', color: 'var(--theme-text-muted)' }}
+                >
+                    Loading users...
+                </div>
+            ) : users.length === 0 ? (
+                <div
+                    className="p-12 text-center rounded-2xl border text-sm opacity-50"
+                    style={{ backgroundColor: 'var(--theme-bg-card)', borderColor: 'rgba(255,255,255,0.05)', color: 'var(--theme-text-muted)' }}
+                >
+                    No users found. Create one to get started.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {currentVertical === 'TAXI' && (
+                        <UserGroupCard
+                            title="Commuters"
+                            accentColor="#22c55e"
+                            users={users.filter(u => u.role !== 'SUPER_ADMIN' && u.role !== 'ORG_ADMIN')}
+                        />
+                    )}
 
-                        {/* Org Admins */}
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="text-lg font-medium mb-4 text-blue-800">Org Admins</h3>
-                            <ul className="divide-y divide-gray-200 bg-white rounded shadow">
-                                {users.filter(u => u.role === 'ORG_ADMIN').map(user => (
-                                    <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
-                                        <div>
-                                            <div className="font-medium text-gray-900">{user.username}</div>
-                                            {user.organizationId && <div className="text-xs text-gray-500">{user.organizationId.displayName || user.organizationId.name}</div>}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-900"><Edit className="h-4 w-4" /></button>
-                                            <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-900"><Trash2 className="h-4 w-4" /></button>
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                    <UserGroupCard
+                        title="Org Admins"
+                        accentColor="#38bdf8"
+                        users={users.filter(u => u.role === 'ORG_ADMIN')}
+                    />
 
-                        {/* Super Admins - Only visible to SUPER_ADMIN users */}
-                        {currentUser?.role === 'SUPER_ADMIN' && (
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <h3 className="text-lg font-medium mb-4 text-purple-800">Super Admins</h3>
-                                <ul className="divide-y divide-gray-200 bg-white rounded shadow">
-                                    {users.filter(u => u.role === 'SUPER_ADMIN').map(user => (
-                                        <li key={user._id} className="p-4 hover:bg-gray-50 flex justify-between items-center">
-                                            <div>
-                                                <div className="font-medium text-gray-900">{user.username}</div>
-                                            </div>
-                                            {/* No Actions for Super Admin */}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                    {currentUser?.role === 'SUPER_ADMIN' && (
+                        <UserGroupCard
+                            title="Super Admins"
+                            accentColor="#a78bfa"
+                            users={users.filter(u => u.role === 'SUPER_ADMIN')}
+                        />
+                    )}
+                </div>
+            )}
         </div>
     );
 };

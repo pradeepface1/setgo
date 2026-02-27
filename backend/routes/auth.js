@@ -22,8 +22,11 @@ router.post('/register', authenticate, async (req, res) => {
         }
 
         // Validate role
-        const validRoles = ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'ROAD_PILOT'];
+        console.log(`[DEBUG] Attempting registration for username: ${username}, role: "${role}" (Length: ${role?.length})`);
+        const validRoles = ['SUPER_ADMIN', 'ORG_ADMIN', 'COMMUTER', 'TAXI_ADMIN', 'LOGISTICS_ADMIN', 'ROAD_PILOT', 'LOGISTICS_STAFF'];
+        console.log(`[DEBUG] Valid roles: ${JSON.stringify(validRoles)}`);
         if (role && !validRoles.includes(role)) {
+            console.log(`[DEBUG] Role validation failed: "${role}" not in ${JSON.stringify(validRoles)}`);
             return res.status(400).json({ error: 'Invalid role' });
         }
 
@@ -163,6 +166,7 @@ router.post('/login', async (req, res) => {
             organizationId: user.organizationId ? user.organizationId._id : null,
             organizationName: user.organizationId ? user.organizationId.displayName : 'Super Admin',
             organizationPreferences: user.organizationId ? user.organizationId.preferences : null,
+            organizationLogo: user.organizationId ? (user.organizationId.logo || null) : null,
             permissions: user.permissions,
             vertical: user.vertical,
             token // Include token in response

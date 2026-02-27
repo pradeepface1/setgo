@@ -6,7 +6,7 @@ const AIChatWidget = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([
-        { text: "Hello! I'm your AI Admin Assistant. How can I help you manage SetGo today?", sender: 'ai' }
+        { text: "Hello! I'm Seti - your AI Bot. How can I help you manage SetGo today?", sender: 'ai' }
     ]);
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
@@ -54,7 +54,7 @@ const AIChatWidget = () => {
                                 <Bot size={20} />
                             </div>
                             <div>
-                                <h3 className="font-semibold text-sm">AI Admin Assistant</h3>
+                                <h3 className="font-semibold text-sm">Seti - AI Bot</h3>
                                 <p className="text-xs text-blue-100 flex items-center gap-1">
                                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                                     Online

@@ -15,6 +15,7 @@ const LogisticTripSchema = new mongoose.Schema({
     // Section 2: Entities
     consignor: {
         name: String,
+        mobile: String, // Added for persistence
         referenceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Consignor' }
     },
     marketVehicle: {
@@ -41,10 +42,14 @@ const LogisticTripSchema = new mongoose.Schema({
         hireValue: Number, // Gross Payable to Driver
         hireType: { type: String, enum: ['FIXED', 'PER_TON'], default: 'PER_TON' },
 
-        // Additional Charges/Deductions
         loadingCharge: Number,
         unloadingCharge: Number,
         commission: Number,
+
+        // Direct Consignor to Driver Payment
+        toPayAmount: Number,
+        toPayCommission: Number,
+        toPayDate: Date,
 
         // Banking for Owner (Snapshot at time of trip)
         bankDetails: {
@@ -63,6 +68,22 @@ const LogisticTripSchema = new mongoose.Schema({
         loadingMamul: Number,
         totalReceivable: Number
     },
+
+    // Additional Billing Fields (Root level as sent by form)
+    billedWeight: Number,
+    loadingMamul: Number,
+    consignorUnloadingMamul: Number,
+    consignorPaymentMamul: Number,
+    tds: Number,
+    roundOff: Number,
+    balanceReceivable: Number,
+    consignorAdvance: Number,
+    consignorAdvancePaymentMode: String,
+    consignorPaymentAccount: String,
+    consignorBalanceReceived: Number,
+    consignorBalanceReceivedDate: Date,
+    consignorBalanceReceiveMode: String,
+    consignorBalanceReceiveAccount: String,
 
     // Section 6: Payment Tracking (The Ledger)
     transactions: [{
